@@ -1,0 +1,50 @@
+Event Name,Parameters,Description
+landing_page_viewed,"source, utm_source, utm_campaign, device_type",User lands on Lipi homepage
+cta_clicked,"cta_name, section",User clicks any CTA button
+demo_clicked,section,User clicks Watch Demo
+signup_started,method,User initiates signup
+signup_completed,method,User successfully creates account
+login_completed,method,User successfully logs in
+onboarding_started,source,User starts onboarding flow
+onboarding_completed,onboarding_time_sec,User completes onboarding
+dashboard_viewed,font_count,Dashboard opened
+create_font_clicked,source_location,User clicks Create Font
+font_creation_started,creation_method,User starts a new font project
+font_name_added,font_name,User names their font
+font_creation_method_selected,method,User chooses Draw or Upload
+first_character_drawn,character,First character drawn in project
+character_completed,"character, progress_percent",Character completed
+character_set_progress,progress_percent,Progress milestone reached
+canvas_tool_selected,tool_name,"Pen, Eraser, Undo, Redo selected"
+canvas_cleared,character,User clears current character
+font_project_saved,font_id,Font project saved
+font_project_reopened,font_id,Existing font opened
+handwriting_upload_started,file_type,Upload process begins
+handwriting_upload_completed,"file_type, file_size_mb",Upload completed
+character_detection_completed,detected_count,OCR detection completed
+character_detection_corrected,corrections_count,User fixes OCR mistakes
+font_generation_started,method,Font generation initiated
+font_generation_completed,"method, generation_time_sec",Font generated successfully
+font_generation_failed,error_reason,Font generation failed
+ai_cleanup_started,font_id,Cleanup process initiated
+ai_cleanup_completed,cleanup_time_sec,Cleanup finished
+preview_opened,font_id,Preview screen opened
+preview_tab_changed,tab_name,User switches preview mode
+preview_text_entered,text_length,User enters preview text
+font_download_requested,format,User clicks download
+font_export_started,format,Export process starts
+font_export_completed,"format, file_size_kb",Export succeeds
+font_downloaded,format,User downloads font
+font_shared,channel,User shares font
+font_deleted,font_id,Font deleted
+font_duplicated,font_id,Font duplicated
+font_renamed,"old_name, new_name",Font renamed
+premium_page_viewed,source,Pricing page opened
+upgrade_clicked,source_location,Upgrade button clicked
+checkout_started,plan_type,Payment process started
+checkout_completed,"plan_type, amount",Payment successful
+subscription_started,plan_type,Subscription activated
+subscription_cancelled,plan_type,Subscription cancelled
+feedback_submitted,rating,User submits feedback
+bug_report_submitted,category,User reports issue
+session_completed,"duration_sec, fonts_created",Session ends

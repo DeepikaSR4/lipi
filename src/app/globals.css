@@ -1,0 +1,326 @@
+/* ─── Google Fonts ─────────────────────────────────────────────────────────── */
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,600&family=Caveat:wght@400;600;700&display=swap");
+
+@import "tailwindcss";
+
+/* ─── Tailwind v4 Theme Tokens ───────────────────────────────────────────────── */
+@theme {
+  /* Colors */
+  --color-lipi-cream: #F5F2EA;
+  --color-lipi-green: #C7F04F;
+  --color-lipi-lavender: #C9B6F5;
+  --color-lipi-dark: #123524;
+  --color-lipi-text: #111111;
+  --color-lipi-border: #111111;
+  --color-lipi-muted: #888888;
+
+  /* Font families */
+  --font-family-space-grotesk: "Space Grotesk", sans-serif;
+  --font-family-cormorant: "Cormorant Garamond", serif;
+  --font-family-caveat: "Caveat", cursive;
+
+  /* Box shadows */
+  --shadow-surface: 0px 4px 12px rgba(17, 17, 17, 0.05);
+  --shadow-elevated: 0px 8px 24px rgba(17, 17, 17, 0.08);
+  --shadow-subtle-hover: 2px 2px 0px #111111;
+
+  /* Keyframes */
+  --animate-marquee: marquee 22s linear infinite;
+  --animate-float: float 3s ease-in-out infinite;
+  --animate-wiggle: wiggle 2s ease-in-out infinite;
+}
+
+@keyframes marquee {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-8px); }
+}
+
+@keyframes wiggle {
+  0%, 100% { transform: rotate(-2deg); }
+  50%       { transform: rotate(2deg); }
+}
+
+
+/* ─── CSS Custom Properties (Design Tokens) ─────────────────────────────────── */
+:root {
+  --color-cream: #F5F2EA;
+  --color-green: #C7F04F;
+  --color-lavender: #C9B6F5;
+  --color-dark: #123524;
+  --color-text: #111111;
+  --color-muted: #888888;
+  --color-border: #111111;
+
+  --font-primary: "Space Grotesk", sans-serif;
+  --font-serif: "Cormorant Garamond", serif;
+  --font-handwritten: "Caveat", cursive;
+
+  --shadow-surface: 0px 4px 12px rgba(17, 17, 17, 0.05);
+  --shadow-elevated: 0px 8px 24px rgba(17, 17, 17, 0.08);
+  --shadow-subtle-hover: 2px 2px 0px var(--color-border);
+}
+
+/* ─── Base Reset ─────────────────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--color-cream);
+  color: var(--color-text);
+  font-family: var(--font-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ─── Typography Scale ───────────────────────────────────────────────────────── */
+.text-display {
+  font-family: var(--font-primary);
+  font-size: clamp(2.5rem, 6vw, 5.5rem);
+  line-height: 1;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  word-break: break-word;
+}
+
+.text-accent {
+  font-family: var(--font-serif);
+  font-size: clamp(2rem, 5vw, 4rem);
+  line-height: 1.1;
+  font-weight: 400;
+}
+
+.text-annotation {
+  font-family: var(--font-handwritten);
+  font-size: 1rem;
+  color: var(--color-text);
+}
+
+/* ─── Rounded Card ─────────────────────────────────────────────────────────── */
+.card {
+  border: 2px solid var(--color-border);
+  border-radius: 32px;
+  background-color: var(--color-cream);
+}
+
+.card-elevated {
+  border: 2px solid var(--color-border);
+  border-radius: 32px;
+  background-color: var(--color-cream);
+  box-shadow: var(--shadow-surface);
+}
+
+.card-elevated:hover {
+  box-shadow: var(--shadow-elevated);
+  transition: all 0.2s ease;
+}
+
+/* ─── Pill Button ───────────────────────────────────────────────────────────── */
+.btn-lipi {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  font-family: var(--font-primary);
+  font-weight: 600;
+  font-size: 0.9rem;
+  border: 2px solid var(--color-border);
+  border-radius: 9999px; /* Pill shape */
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+  user-select: none;
+}
+
+.btn-primary {
+  background-color: var(--color-green);
+  color: var(--color-text);
+}
+
+.btn-secondary {
+  background-color: var(--color-cream);
+  color: var(--color-text);
+}
+
+.btn-dark {
+  background-color: var(--color-dark);
+  color: var(--color-cream);
+}
+
+.btn-ghost {
+  background-color: transparent;
+  color: var(--color-text);
+  border: none;
+  border-radius: 0;
+  padding: 0.5rem;
+}
+
+/* ─── Input / Textarea (Brutalist) ──────────────────────────────────────────── */
+.input-brutal {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 2px solid var(--color-border);
+  background: var(--color-cream);
+  font-family: var(--font-primary);
+  font-size: 1rem;
+  outline: none;
+  box-shadow: var(--shadow-brutal-sm);
+  transition: box-shadow 0.12s ease, transform 0.12s ease;
+  border-radius: 0;
+}
+
+.input-brutal:focus {
+  box-shadow: var(--shadow-brutal);
+  transform: translate(-2px, -2px);
+}
+
+/* ─── Handwritten Note ──────────────────────────────────────────────────────── */
+.note-tag {
+  font-family: var(--font-handwritten);
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 0.25rem 0.75rem;
+  border: 2px solid var(--color-border);
+  display: inline-block;
+  background: var(--color-green);
+  box-shadow: var(--shadow-brutal-sm);
+}
+
+/* ─── Scrollbar ─────────────────────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-cream);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 0;
+}
+
+/* ─── Canvas Drawing Area ───────────────────────────────────────────────────── */
+.canvas-wrapper {
+  position: relative;
+  background: #ffffff;
+  border: 2px solid var(--color-border);
+  box-shadow: var(--shadow-brutal);
+  overflow: hidden;
+  cursor: crosshair;
+}
+
+.canvas-wrapper canvas {
+  display: block;
+  touch-action: none;
+}
+
+/* ─── Marquee ───────────────────────────────────────────────────────────────── */
+.marquee-track {
+  display: flex;
+  gap: 3rem;
+  animation: marquee 22s linear infinite;
+  white-space: nowrap;
+}
+
+@keyframes marquee {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+/* ─── Character Grid Cell ───────────────────────────────────────────────────── */
+.char-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--color-border);
+  background: var(--color-cream);
+  cursor: pointer;
+  font-family: var(--font-primary);
+  font-weight: 600;
+  font-size: 1rem;
+  transition: all 0.1s ease;
+  position: relative;
+  aspect-ratio: 1;
+}
+
+.char-cell:hover {
+  background: var(--color-lavender);
+  transform: translate(-1px, -1px);
+  box-shadow: var(--shadow-brutal-sm);
+}
+
+.char-cell.selected {
+  background: var(--color-green);
+  box-shadow: var(--shadow-brutal-sm);
+  transform: translate(-1px, -1px);
+}
+
+.char-cell.has-glyph::after {
+  content: "";
+  position: absolute;
+  bottom: 3px;
+  right: 3px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-dark);
+}
+
+/* ─── Sidebar ───────────────────────────────────────────────────────────────── */
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1rem 0;
+  border-right: 2px solid var(--color-border);
+  background: var(--color-cream);
+  gap: 0.5rem;
+}
+
+.sidebar-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.1s ease;
+  color: var(--color-muted);
+}
+
+.sidebar-icon:hover,
+.sidebar-icon.active {
+  border-color: var(--color-border);
+  background: var(--color-green);
+  color: var(--color-text);
+  box-shadow: var(--shadow-brutal-sm);
+}
+
+/* ─── Utility ───────────────────────────────────────────────────────────────── */
+.section-heading {
+  font-family: var(--font-serif);
+  font-size: clamp(1.75rem, 4vw, 3rem);
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.tag {
+  font-family: var(--font-handwritten);
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 0.2rem 0.6rem;
+  background: var(--color-green);
+  border: 2px solid var(--color-border);
+  display: inline-block;
+  transform: rotate(-1deg);
+}

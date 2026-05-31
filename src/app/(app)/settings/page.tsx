@@ -96,22 +96,6 @@ export default function SettingsPage() {
         </div>
       </section>
 
-      {/* Plan section */}
-      <section className="border-2 border-lipi-border bg-lipi-lavender p-6 mb-6 rounded-[32px]" >
-        <h2 className="font-[family-name:var(--font-space-grotesk)] font-bold text-sm mb-3">Current Plan</h2>
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="font-[family-name:var(--font-cormorant)] text-2xl font-bold">Free</div>
-            <div className="text-xs text-lipi-text/60 font-[family-name:var(--font-space-grotesk)] mt-1">
-              1 active font · Limited exports
-            </div>
-          </div>
-          <button className="btn-lipi btn-dark text-sm">
-            Upgrade →
-          </button>
-        </div>
-      </section>
-
       {/* Danger zone */}
       <section className="border-2 border-red-300 bg-white p-6" >
         <h2 className="font-[family-name:var(--font-space-grotesk)] font-bold text-sm mb-3 text-red-600">

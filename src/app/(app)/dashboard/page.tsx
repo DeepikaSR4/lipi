@@ -43,80 +43,96 @@ function FontCard({ project, onDelete }: { project: FontProject; onDelete: () =>
     <motion.div
       initial={{ opacity: 0, scale: 0.96 }}
       animate={{ opacity: 1, scale: 1 }}
-      whileHover={{ x: -3, y: -3, }}
-      className="border-2 border-lipi-border bg-white group cursor-pointer rounded-[32px] overflow-hidden"
-      
+      whileHover={{ x: -3, y: -3 }}
+      className="border-2 border-lipi-border bg-white group cursor-pointer rounded-xl sm:rounded-[32px] overflow-hidden"
     >
-      <Link href={`/workspace/${project.id}`}>
-        {/* Preview area */}
-        <div
-          className="border-b-2 border-lipi-border p-6 flex items-center justify-center h-32"
-          style={{ backgroundColor: color }}
-        >
-          <span
-            className="font-[family-name:var(--font-caveat)] text-4xl text-lipi-text leading-none"
+      {/* Mobile View: Compact List Item */}
+      <div className="flex sm:hidden p-4 items-center gap-4">
+        <Link href={`/workspace/${project.id}`} className="flex-1 flex items-center gap-4 min-w-0">
+          <div
+            className="w-12 h-12 flex items-center justify-center border-2 border-lipi-border flex-shrink-0"
+            style={{ backgroundColor: color }}
           >
-            {project.fontName.slice(0, 2) || "Aa"}
-          </span>
-        </div>
-
-        {/* Meta */}
-        <div className="p-4">
-          <div className="font-[family-name:var(--font-space-grotesk)] font-bold text-sm mb-1">
-            {project.fontName}
+            <span className="font-[family-name:var(--font-caveat)] text-xl text-lipi-text font-bold">
+              {project.fontName.slice(0, 2) || "Aa"}
+            </span>
           </div>
-          <div className="text-xs text-lipi-muted font-[family-name:var(--font-space-grotesk)]">
-            {glyphCount} / 62 glyphs
+          <div className="flex-1 min-w-0">
+            <div className="font-[family-name:var(--font-space-grotesk)] font-bold text-sm truncate text-lipi-text">
+              {project.fontName}
+            </div>
+            <div className="text-[10px] text-lipi-muted font-[family-name:var(--font-space-grotesk)] mt-0.5">
+              {glyphCount} / 62 glyphs
+            </div>
           </div>
-
-          {/* Progress bar */}
-          <div className="mt-2 h-1 bg-lipi-border/20 border border-lipi-border/20">
-            <div
-              className="h-full bg-lipi-green"
-              style={{ width: `${(glyphCount / 62) * 100}%` }}
-            />
-          </div>
-        </div>
-      </Link>
-
-      {/* Actions */}
-      <div className="px-4 pb-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-        <Link
-          href={`/preview/${project.id}`}
-          className="text-xs font-[family-name:var(--font-space-grotesk)] underline underline-offset-2"
-        >
-          Preview
         </Link>
-        <span className="text-lipi-muted">·</span>
-        <button
-          onClick={onDelete}
-          className="text-xs font-[family-name:var(--font-space-grotesk)] text-red-500 underline underline-offset-2"
-        >
-          Delete
-        </button>
+        <div className="flex items-center gap-2 text-[11px] font-[family-name:var(--font-space-grotesk)] font-bold shrink-0">
+          <Link href={`/workspace/${project.id}`} className="text-lipi-text underline">
+            Edit
+          </Link>
+          <span className="text-lipi-border/30">·</span>
+          <Link href={`/preview/${project.id}`} className="text-lipi-text underline">
+            Preview
+          </Link>
+          <span className="text-lipi-border/30">·</span>
+          <button onClick={onDelete} className="text-red-500 underline cursor-pointer">
+            Delete
+          </button>
+        </div>
+      </div>
+
+      {/* Desktop View: Full Card */}
+      <div className="hidden sm:block h-full">
+        <Link href={`/workspace/${project.id}`}>
+          {/* Preview area */}
+          <div
+            className="border-b-2 border-lipi-border p-6 flex items-center justify-center h-32"
+            style={{ backgroundColor: color }}
+          >
+            <span
+              className="font-[family-name:var(--font-caveat)] text-4xl text-lipi-text leading-none"
+            >
+              {project.fontName.slice(0, 2) || "Aa"}
+            </span>
+          </div>
+
+          {/* Meta */}
+          <div className="p-4">
+            <div className="font-[family-name:var(--font-space-grotesk)] font-bold text-sm mb-1">
+              {project.fontName}
+            </div>
+            <div className="text-xs text-lipi-muted font-[family-name:var(--font-space-grotesk)]">
+              {glyphCount} / 62 glyphs
+            </div>
+
+            {/* Progress bar */}
+            <div className="mt-2 h-1 bg-lipi-border/20 border border-lipi-border/20">
+              <div
+                className="h-full bg-lipi-green"
+                style={{ width: `${(glyphCount / 62) * 100}%` }}
+              />
+            </div>
+          </div>
+        </Link>
+
+        {/* Actions */}
+        <div className="px-4 pb-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          <Link
+            href={`/preview/${project.id}`}
+            className="text-xs font-[family-name:var(--font-space-grotesk)] underline underline-offset-2"
+          >
+            Preview
+          </Link>
+          <span className="text-lipi-muted">·</span>
+          <button
+            onClick={onDelete}
+            className="text-xs font-[family-name:var(--font-space-grotesk)] text-red-500 underline underline-offset-2 cursor-pointer"
+          >
+            Delete
+          </button>
+        </div>
       </div>
     </motion.div>
-  );
-}
-
-function UpgradeCard() {
-  return (
-    <div
-      className="border-2 border-lipi-border bg-lipi-lavender px-6 py-4 rounded-[32px] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 w-full"
-    >
-      <div>
-        <div className="font-[family-name:var(--font-space-grotesk)] font-bold mb-1">Go Premium</div>
-        <p className="text-xs text-lipi-text/60 font-[family-name:var(--font-space-grotesk)]">
-          Unlimited fonts · AI cleanup · Cloud saves · Priority export
-        </p>
-      </div>
-      <button 
-        className="btn-lipi btn-dark text-sm py-2 px-6 whitespace-nowrap shrink-0"
-        onClick={() => analytics.trackUpgradeClicked("dashboard_banner")}
-      >
-        Upgrade ↗
-      </button>
-    </div>
   );
 }
 
@@ -182,11 +198,6 @@ export default function DashboardPage() {
         </Link>
       </motion.div>
 
-      {/* Upgrade banner moved to top */}
-      <div className="mb-10">
-        <UpgradeCard />
-      </div>
-
       {/* Grid */}
       {loading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 mb-8">
@@ -219,12 +230,22 @@ export default function DashboardPage() {
               analytics.trackCreateFontClicked("grid_card");
               router.push("/create");
             }}
-            className="border-2 border-dashed border-lipi-border flex flex-col items-center justify-center min-h-[200px] cursor-pointer hover:bg-lipi-green/10 transition-colors group"
+            className="border-2 border-dashed border-lipi-border cursor-pointer hover:bg-lipi-green/10 transition-colors group rounded-xl sm:rounded-[32px]"
           >
-            <span className="text-4xl text-lipi-border/30 group-hover:text-lipi-text transition-colors mb-2">+</span>
-            <span className="text-xs font-[family-name:var(--font-space-grotesk)] text-lipi-muted group-hover:text-lipi-text transition-colors">
-              New font
-            </span>
+            {/* Mobile list view */}
+            <div className="flex sm:hidden p-4 items-center gap-4 justify-center">
+              <span className="text-2xl text-lipi-border/30 group-hover:text-lipi-text transition-colors">+</span>
+              <span className="text-xs font-[family-name:var(--font-space-grotesk)] font-bold text-lipi-muted group-hover:text-lipi-text transition-colors">
+                Create new font project
+              </span>
+            </div>
+            {/* Desktop grid view */}
+            <div className="hidden sm:flex flex-col items-center justify-center min-h-[200px]">
+              <span className="text-4xl text-lipi-border/30 group-hover:text-lipi-text transition-colors mb-2">+</span>
+              <span className="text-xs font-[family-name:var(--font-space-grotesk)] text-lipi-muted group-hover:text-lipi-text transition-colors">
+                New font
+              </span>
+            </div>
           </motion.div>
         </motion.div>
       )}

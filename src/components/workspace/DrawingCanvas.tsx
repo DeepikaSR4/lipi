@@ -26,16 +26,16 @@ export function DrawingCanvas() {
   return (
     <div
       ref={wrapperRef}
-      className="flex-1 flex items-center justify-center p-6 bg-lipi-cream"
+      className="flex-shrink-0 flex items-center justify-center p-4 md:p-6 bg-lipi-cream"
     >
       <div
         className="canvas-wrapper"
         style={{
-          width: CANVAS_SIZE,
-          height: CANVAS_SIZE,
+          width: "min(100%, 420px)",
+          height: "auto",
+          aspectRatio: "1/1",
           transform: `scale(${zoom})`,
           transformOrigin: "center center",
-          maxWidth: "100%",
         }}
       >
         {/* Guide lines canvas (bottom layer) */}

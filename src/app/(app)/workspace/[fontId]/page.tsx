@@ -25,6 +25,7 @@ export default function WorkspacePage({
   const [loading, setLoading] = useState(true);
   const [showExport, setShowExport] = useState(false);
   const [syncStatus, setSyncStatus] = useState<"synced" | "syncing" | "error">("synced");
+  const [workspaceTab, setWorkspaceTab] = useState<"draw" | "grid">("draw");
   const latestGlyphs = useRef(glyphs);
 
   // Load project
@@ -129,9 +130,37 @@ export default function WorkspacePage({
       <Toolbar />
 
       {/* Main workspace: Canvas | Grid */}
-      <div className="flex flex-1 overflow-hidden">
-        <DrawingCanvas />
-        <CharacterGrid />
+      <div className="flex flex-1 overflow-hidden flex-col md:flex-row relative">
+        <div className={`flex-1 flex flex-col overflow-y-auto ${workspaceTab === "draw" ? "flex" : "hidden md:flex"}`}>
+          <DrawingCanvas />
+        </div>
+        <div className={`w-full md:w-80 flex-shrink-0 ${workspaceTab === "grid" ? "flex" : "hidden md:flex"}`}>
+          <CharacterGrid />
+        </div>
+      </div>
+
+      {/* Mobile Workspace Tabs Selector */}
+      <div className="md:hidden border-t-2 border-lipi-border bg-lipi-cream grid grid-cols-2 p-1.5 gap-1.5 z-30">
+        <button
+          onClick={() => setWorkspaceTab("draw")}
+          className={`py-2 text-xs font-[family-name:var(--font-space-grotesk)] font-bold border-2 transition-all flex items-center justify-center gap-1.5 ${
+            workspaceTab === "draw"
+              ? "bg-lipi-green border-lipi-border shadow-[2px_2px_0px_#111] -translate-x-0.5 -translate-y-0.5"
+              : "bg-white border-lipi-border/30 text-lipi-muted hover:border-lipi-border text-lipi-text cursor-pointer"
+          }`}
+        >
+          ✏️ Draw Canvas
+        </button>
+        <button
+          onClick={() => setWorkspaceTab("grid")}
+          className={`py-2 text-xs font-[family-name:var(--font-space-grotesk)] font-bold border-2 transition-all flex items-center justify-center gap-1.5 ${
+            workspaceTab === "grid"
+              ? "bg-lipi-green border-lipi-border shadow-[2px_2px_0px_#111] -translate-x-0.5 -translate-y-0.5"
+              : "bg-white border-lipi-border/30 text-lipi-muted hover:border-lipi-border text-lipi-text cursor-pointer"
+          }`}
+        >
+          🔠 Character Grid
+        </button>
       </div>
 
       {/* Export overlay */}

@@ -65,20 +65,17 @@ export function HeroSection() {
   }, []);
 
   return (
-    <section
-      className="px-4 md:px-8 py-4 md:py-6 max-w-7xl mx-auto"
-      style={{ height: "calc(100dvh - 56px)" }}
-    >
+    <section className="px-4 md:px-8 py-6 md:py-6 max-w-7xl mx-auto h-auto md:h-[calc(100dvh-56px)]">
       <motion.div
         variants={containerVariants}
         initial="hidden"
         animate="visible"
-        className="grid grid-cols-1 md:grid-cols-2 gap-4 h-full"
+        className="grid grid-cols-1 md:grid-cols-2 gap-6 h-auto md:h-full"
       >
         {/* LEFT CARD — Cream */}
         <motion.div
           variants={itemVariants}
-          className="bg-lipi-cream px-8 py-6 relative overflow-hidden flex flex-col justify-between border-2 border-lipi-border rounded-[32px] h-full"
+          className="bg-lipi-cream px-8 py-6 relative overflow-hidden flex flex-col justify-between border-2 border-lipi-border rounded-[32px] h-auto md:h-full min-h-[440px] md:min-h-0"
         >
           {/* Annotation top */}
           <div className="flex items-center gap-3 mb-4">
@@ -92,7 +89,7 @@ export function HeroSection() {
           </div>
 
           {/* Main heading */}
-          <div className="flex-1 flex flex-col justify-center">
+          <div className="flex-1 flex flex-col justify-center my-6 md:my-0">
             <h1 className="font-[family-name:var(--font-primary)] font-bold leading-[1] tracking-tight text-lipi-text mb-4"
               style={{ fontSize: "clamp(2rem, 5vw, 4rem)" }}
             >
@@ -131,7 +128,7 @@ export function HeroSection() {
           </div>
 
           {/* Stats row */}
-          <div className="flex gap-6 pt-4 border-t-2 border-lipi-border">
+          <div className="flex gap-6 pt-4 border-t-2 border-lipi-border mt-auto">
             {[
               { val: "12k+", label: "fonts created" },
               { val: "4.9★", label: "rating" },
@@ -153,7 +150,7 @@ export function HeroSection() {
         {/* RIGHT CARD — Dark green */}
         <motion.div
           variants={itemVariants}
-          className="bg-lipi-dark px-8 py-6 relative overflow-hidden flex flex-col justify-between border-2 border-lipi-border rounded-[32px] h-full"
+          className="bg-lipi-dark px-8 py-6 relative overflow-hidden flex flex-col justify-between border-2 border-lipi-border rounded-[32px] h-auto md:h-full min-h-[440px] md:min-h-0"
         >
           {/* Floating doodles */}
           <FlowerDoodle className="absolute top-6 right-10 opacity-80" />
@@ -167,12 +164,12 @@ export function HeroSection() {
           </div>
 
           {/* Workspace preview */}
-          <div className="mt-14 relative z-10 flex-1 flex flex-col justify-center">
+          <div className="mt-14 mb-8 relative z-10 flex-1 flex flex-col justify-center">
             <WorkspacePreview />
           </div>
 
           {/* Bottom handwriting sample */}
-          <div className="relative z-10">
+          <div className="relative z-10 mt-auto">
             <div className="font-[family-name:var(--font-primary)] text-lipi-cream/40 text-xs mb-2 tracking-wide uppercase font-semibold">
               Live Preview
             </div>

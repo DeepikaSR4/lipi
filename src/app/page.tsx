@@ -2,7 +2,6 @@ import { Navbar } from "@/components/layout/Navbar";
 import { HeroSection } from "@/components/landing/HeroSection";
 import { CompatibilityStrip } from "@/components/landing/CompatibilityStrip";
 import { FeatureStrip } from "@/components/landing/FeatureStrip";
-import { DashboardPreview } from "@/components/landing/DashboardPreview";
 import { CreateFlowSection } from "@/components/landing/CreateFlowSection";
 import { WorkspaceSection } from "@/components/landing/WorkspaceSection";
 import { ExportSection } from "@/components/landing/ExportSection";
@@ -21,7 +20,6 @@ export default function HomePage() {
       <HeroSection />
       <CompatibilityStrip />
       <FeatureStrip />
-      <DashboardPreview />
       <CreateFlowSection />
       <WorkspaceSection />
       <ExportSection />

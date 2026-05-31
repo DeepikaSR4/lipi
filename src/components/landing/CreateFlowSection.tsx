@@ -59,25 +59,28 @@ export function CreateFlowSection() {
           viewport={{ once: true }}
           transition={{ duration: 0.5, delay: 0.1 }}
           whileHover={{ x: -3, y: -3, }}
-          className="border-2 border-lipi-border bg-lipi-cream p-8 relative cursor-pointer group rounded-[32px]"
-          
+          className="border-2 border-lipi-border bg-lipi-cream/40 p-8 relative cursor-not-allowed group rounded-[32px]"
         >
+          <div className="absolute -top-3 -right-3">
+            <HandwrittenNote text="coming soon" rotation={-3} color="cream" />
+          </div>
+
           {/* Upload preview */}
-          <div className="border-2 border-dashed border-lipi-border bg-white mb-6 p-4 h-32 flex items-center justify-center">
-            <div className="text-center">
+          <div className="border-2 border-dashed border-lipi-border/30 bg-white/50 mb-6 p-4 h-32 flex items-center justify-center">
+            <div className="text-center opacity-50">
               <div className="text-3xl mb-1">📄</div>
               <div className="text-xs font-[family-name:var(--font-space-grotesk)] text-lipi-muted">PNG · JPG · JPEG</div>
             </div>
           </div>
 
-          <h3 className="font-[family-name:var(--font-cormorant)] text-3xl font-bold mb-2">Upload it</h3>
-          <p className="font-[family-name:var(--font-space-grotesk)] text-sm text-lipi-text/70 mb-6">
+          <h3 className="font-[family-name:var(--font-cormorant)] text-3xl font-bold mb-2 text-lipi-text/60">Upload it</h3>
+          <p className="font-[family-name:var(--font-space-grotesk)] text-sm text-lipi-text/50 mb-6">
             Write all 26 letters on paper, photograph it, and upload. We'll detect and vectorize each character automatically.
           </p>
 
-          <Link href="/create?method=upload" className="btn-lipi btn-secondary text-sm inline-flex">
-            Upload handwriting →
-          </Link>
+          <div className="btn-lipi border-lipi-border/20 bg-lipi-border/5 text-lipi-muted text-xs inline-flex cursor-not-allowed select-none">
+            Coming Soon 🔒
+          </div>
         </motion.div>
       </div>
 

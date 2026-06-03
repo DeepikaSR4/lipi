@@ -61,7 +61,7 @@ export function Sidebar() {
   };
 
   return (
-    <aside className="sidebar hidden md:flex w-14 min-h-screen flex-col fixed left-0 top-0 z-40">
+    <aside className="hidden md:flex w-14 min-h-screen flex-col items-center py-4 border-r-2 border-lipi-border bg-lipi-cream gap-2 fixed left-0 top-0 z-40">
       {/* Logo mark */}
       <Link
         href="/dashboard"

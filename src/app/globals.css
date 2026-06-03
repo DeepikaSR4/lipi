@@ -278,15 +278,6 @@ body {
 }
 
 /* ─── Sidebar ───────────────────────────────────────────────────────────────── */
-.sidebar {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 1rem 0;
-  border-right: 2px solid var(--color-border);
-  background: var(--color-cream);
-  gap: 0.5rem;
-}
 
 .sidebar-icon {
   display: flex;

@@ -70,9 +70,12 @@ export function Toolbar() {
   return (
     <div className="border-b-2 border-lipi-border bg-lipi-cream px-4 py-2 flex items-center gap-2 flex-wrap">
       {/* Font name */}
-      <div className="font-[family-name:var(--font-space-grotesk)] font-bold text-sm mr-4">
+      <div className="hidden md:block font-[family-name:var(--font-space-grotesk)] font-bold text-sm mr-4">
         {fontName}
         <span className="text-lipi-muted font-normal ml-2">/ Drawing: {selectedChar}</span>
+      </div>
+      <div className="md:hidden font-[family-name:var(--font-space-grotesk)] font-bold text-sm mr-1">
+        Drawing: {selectedChar}
       </div>
 
       {/* Tools */}
@@ -84,12 +87,11 @@ export function Toolbar() {
             onClick={() => handleTool(id)}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className={`h-8 px-3 border-2 flex items-center justify-center gap-2 text-sm font-[family-name:var(--font-space-grotesk)] font-medium transition-colors ${
+            className={`h-8 px-2 sm:px-3 border-2 flex items-center justify-center gap-1 sm:gap-2 text-sm font-[family-name:var(--font-space-grotesk)] font-medium transition-colors ${
               (id === "pen" || id === "eraser") && activeTool === id
                 ? "border-lipi-border bg-lipi-green text-lipi-text"
                 : "border-lipi-border bg-white text-lipi-text hover:bg-lipi-green/20"
             }`}
-            
           >
             <span>{symbol}</span>
             <span className="hidden sm:inline">{label}</span>
@@ -123,10 +125,10 @@ export function Toolbar() {
           onClick={saveCurrentGlyph}
           whileHover={{ x: -1, y: -1, }}
           whileTap={{ x: 1, y: 1, }}
-          className="btn-lipi btn-primary text-xs px-4 py-1.5"
-          
+          className="btn-lipi btn-primary text-xs px-3 sm:px-4 py-1.5"
         >
-          Save glyph →
+          <span className="hidden sm:inline">Save glyph →</span>
+          <span className="sm:hidden">Save</span>
         </motion.button>
       </div>
     </div>

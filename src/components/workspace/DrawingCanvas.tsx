@@ -26,7 +26,7 @@ export function DrawingCanvas() {
   return (
     <div
       ref={wrapperRef}
-      className="flex-shrink-0 flex items-center justify-center p-4 md:p-6 bg-lipi-cream"
+      className="w-full max-w-full flex-shrink-0 flex items-center justify-center p-4 md:p-6 bg-lipi-cream min-w-0"
     >
       <div
         className="canvas-wrapper"

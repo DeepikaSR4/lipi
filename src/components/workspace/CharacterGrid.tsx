@@ -87,7 +87,7 @@ export function CharacterGrid() {
 
   if (showSuccess) {
     return (
-      <div className="w-80 border-l-2 border-lipi-border bg-lipi-cream flex flex-col h-full overflow-y-auto">
+      <div className="w-full flex flex-col h-full overflow-y-auto">
         {/* Celebration Header */}
         <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
           {/* Animated celebration graphic */}
@@ -179,7 +179,7 @@ export function CharacterGrid() {
   }
 
   return (
-    <div className="w-80 border-l-2 border-lipi-border bg-lipi-cream flex flex-col">
+    <div className="w-full flex flex-col">
 
       {/* All Done celebratory banner (only when viewing grid after completion) */}
       {isAllDone && viewGridOverride && (

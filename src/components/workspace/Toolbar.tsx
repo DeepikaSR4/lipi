@@ -37,6 +37,7 @@ export function Toolbar() {
     redo,
     clearCanvas,
     saveCurrentGlyph,
+    saveAndNext,
   } = useFontStore();
 
   const handleTool = (id: ToolId) => {
@@ -119,16 +120,16 @@ export function Toolbar() {
         {Math.round(zoom * 100)}%
       </div>
 
-      {/* Save glyph */}
+      {/* Save & Next */}
       <div className="ml-auto">
         <motion.button
-          onClick={saveCurrentGlyph}
+          onClick={saveAndNext}
           whileHover={{ x: -1, y: -1, }}
           whileTap={{ x: 1, y: 1, }}
           className="btn-lipi btn-primary text-xs px-3 sm:px-4 py-1.5"
         >
-          <span className="hidden sm:inline">Save glyph →</span>
-          <span className="sm:hidden">Save</span>
+          <span className="hidden sm:inline">Save &amp; Next →</span>
+          <span className="sm:hidden">Next →</span>
         </motion.button>
       </div>
     </div>

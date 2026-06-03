@@ -17,67 +17,32 @@ const TABS: { id: CharSet; label: string }[] = [
 const MILESTONES = [25, 50, 75, 100];
 
 export function CharacterGrid() {
-  const [activeTab, setActiveTab] = useState<CharSet>("uppercase");
   const [justSaved, setJustSaved] = useState<string | null>(null);
   const [viewGridOverride, setViewGridOverride] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
 
-  const { selectedChar, glyphs, switchChar, saveCurrentGlyph, currentStrokes, fontId, fontName } = useFontStore();
+  const {
+    selectedChar,
+    glyphs,
+    switchChar,
+    saveCurrentGlyph,
+    currentStrokes,
+    fontId,
+    fontName,
+    activeTab,
+    setActiveTab
+  } = useFontStore();
 
   const chars = CHAR_SETS[activeTab];
   const totalChars = Object.values(CHAR_SETS).flat().length;
   const doneChars = Object.keys(glyphs).length;
   const progressPct = Math.round((doneChars / totalChars) * 100);
 
-
-
-  // Returns { char, tab } of the next undone character, searching across all tabs
-  const getNextChar = (): { char: string; tab: CharSet } | null => {
-    const tabOrder: CharSet[] = ["uppercase", "lowercase", "numbers", "symbols"];
-    const currentTabIndex = tabOrder.indexOf(activeTab);
-    const currentChars = CHAR_SETS[activeTab];
-    const currentIdx = currentChars.indexOf(selectedChar);
-
-    // 1. Look for undone chars AFTER current char in current tab
-    for (let i = currentIdx + 1; i < currentChars.length; i++) {
-      if (!(currentChars[i] in glyphs)) return { char: currentChars[i], tab: activeTab };
-    }
-
-    // 2. Look in subsequent tabs (in order)
-    for (let t = currentTabIndex + 1; t < tabOrder.length; t++) {
-      const tab = tabOrder[t];
-      const chars = CHAR_SETS[tab];
-      for (const char of chars) {
-        if (!(char in glyphs)) return { char, tab };
-      }
-    }
-
-    // 3. Wrap: look in tabs before current tab
-    for (let t = 0; t < currentTabIndex; t++) {
-      const tab = tabOrder[t];
-      const chars = CHAR_SETS[tab];
-      for (const char of chars) {
-        if (!(char in glyphs)) return { char, tab };
-      }
-    }
-
-    // 4. All done — wrap to next char in current tab
-    const nextIdx = (currentIdx + 1) % currentChars.length;
-    return { char: currentChars[nextIdx], tab: activeTab };
-  };
-
-  const handleSaveAndNext = () => {
-    // Only save if something was actually drawn — avoids wiping a previously-saved glyph
+  const handleSave = () => {
     if (hasDrawing) {
       saveCurrentGlyph();
       setJustSaved(selectedChar);
       setTimeout(() => setJustSaved(null), 1200);
-    }
-    const next = getNextChar();
-    if (next) {
-      // Switch tab first so the grid visually updates
-      if (next.tab !== activeTab) setActiveTab(next.tab);
-      switchChar(next.char);
     }
   };
 
@@ -242,10 +207,10 @@ export function CharacterGrid() {
         </div>
       </div>
 
-      {/* Save & Next CTA */}
+      {/* Save CTA */}
       <div className="border-b-2 border-lipi-border p-2">
         <motion.button
-          onClick={handleSaveAndNext}
+          onClick={handleSave}
           disabled={!hasDrawing}
           whileHover={hasDrawing ? { x: -2, y: -2 } : {}}
           whileTap={hasDrawing ? { x: 1, y: 1 } : {}}
@@ -274,11 +239,30 @@ export function CharacterGrid() {
                 exit={{ opacity: 0 }}
                 className="flex items-center gap-1"
               >
-                Save &amp; Next →
+                Save Drawing
               </motion.span>
             )}
           </AnimatePresence>
         </motion.button>
+      </div>
+
+      {/* Current char callout */}
+      <div className="border-b-2 border-lipi-border p-3 bg-white">
+        <div className="text-[10px] text-lipi-muted font-[family-name:var(--font-space-grotesk)] mb-1 uppercase tracking-wide">
+          Drawing
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="font-[family-name:var(--font-caveat)] text-4xl text-lipi-text leading-none">
+            {selectedChar}
+          </span>
+          <span className={`text-xs font-[family-name:var(--font-space-grotesk)] font-bold px-2 py-1 border-2 ${
+            selectedChar in glyphs
+              ? "bg-lipi-green border-lipi-dark text-lipi-dark"
+              : "bg-lipi-border/10 border-lipi-border/30 text-lipi-muted"
+          }`}>
+            {selectedChar in glyphs ? "✓ Done" : "Not drawn"}
+          </span>
+        </div>
       </div>
 
       {/* Tab switcher */}
@@ -352,24 +336,6 @@ export function CharacterGrid() {
         </div>
       </div>
 
-      {/* Bottom: current char callout */}
-      <div className="border-t-2 border-lipi-border p-3 bg-white">
-        <div className="text-[10px] text-lipi-muted font-[family-name:var(--font-space-grotesk)] mb-1 uppercase tracking-wide">
-          Drawing
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="font-[family-name:var(--font-caveat)] text-4xl text-lipi-text leading-none">
-            {selectedChar}
-          </span>
-          <span className={`text-xs font-[family-name:var(--font-space-grotesk)] font-bold px-2 py-1 border-2 ${
-            selectedChar in glyphs
-              ? "bg-lipi-green border-lipi-dark text-lipi-dark"
-              : "bg-lipi-border/10 border-lipi-border/30 text-lipi-muted"
-          }`}>
-            {selectedChar in glyphs ? "✓ Done" : "Not drawn"}
-          </span>
-        </div>
-      </div>
     </div>
   );
 }

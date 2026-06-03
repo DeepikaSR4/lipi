@@ -81,12 +81,13 @@ export default function WorkspacePage({
   return (
     <div className="h-dvh flex flex-col bg-lipi-cream overflow-hidden">
       {/* Top navigation bar */}
-      <div className="border-b-2 border-lipi-border px-4 py-2 flex items-center gap-2 sm:gap-4 bg-lipi-cream z-30 w-full max-w-full">
+      <div className="border-b-2 border-lipi-border px-4 py-2 flex items-center gap-1.5 sm:gap-4 bg-lipi-cream z-30 w-full max-w-full">
         <Link
           href="/dashboard"
           className="text-xs font-[family-name:var(--font-space-grotesk)] text-lipi-muted hover:text-lipi-text flex items-center gap-1 shrink-0"
         >
-          ← Dashboard
+          <span className="hidden sm:inline">← Dashboard</span>
+          <span className="sm:hidden">←</span>
         </Link>
         <span className="text-lipi-border/30">|</span>
         <span className="font-[family-name:var(--font-space-grotesk)] font-bold text-sm flex items-center gap-1.5 shrink-0">
@@ -111,10 +112,10 @@ export default function WorkspacePage({
             )}
           </span>
         </div>
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
           <Link
             href={`/preview/${fontId}`}
-            className="btn-lipi btn-secondary text-xs py-1.5 px-3 shrink-0"
+            className="btn-lipi btn-secondary text-xs py-1 px-2 sm:py-1.5 sm:px-3 shrink-0"
           >
             Preview ↗
           </Link>
@@ -122,7 +123,7 @@ export default function WorkspacePage({
             onClick={() => setShowExport(true)}
             whileHover={{ x: -1, y: -1, }}
             whileTap={{ x: 1, y: 1, }}
-            className="btn-lipi btn-primary text-xs py-1.5 px-3 shrink-0"
+            className="btn-lipi btn-primary text-xs py-1 px-2 sm:py-1.5 sm:px-3 shrink-0"
           >
             <span className="hidden sm:inline">Export font ↓</span>
             <span className="sm:hidden">Export ↓</span>
@@ -141,6 +142,8 @@ export default function WorkspacePage({
         <div className="w-full md:w-80 flex-shrink-0 border-t-2 md:border-t-0 md:border-l-2 border-lipi-border flex flex-col bg-lipi-cream min-w-0">
           <CharacterGrid />
         </div>
+        {/* Mobile scroll indicator gradient */}
+        <div className="md:hidden pointer-events-none absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-lipi-cream/90 to-transparent z-10" />
       </div>
 
       {/* Export overlay */}

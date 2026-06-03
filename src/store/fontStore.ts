@@ -1,7 +1,7 @@
 // src/store/fontStore.ts
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
-import type { Point, Stroke, GlyphStrokes, ToolType } from "@/types";
+import { type Point, type Stroke, type GlyphStrokes, type ToolType, type CharSet, CHAR_SETS } from "@/types";
 
 interface FontStore {
   // ── Project ──────────────────────────────────────────────────────────────
@@ -63,6 +63,10 @@ interface FontStore {
   /** Erase strokes that intersect a point (for eraser tool) */
   eraseAt: (point: Point, radius: number) => void;
 
+  activeTab: CharSet;
+  setActiveTab: (tab: CharSet) => void;
+  saveAndNext: () => void;
+
   reset: () => void;
 }
 
@@ -79,6 +83,7 @@ const initialState = {
   zoom: 1,
   exportStatus: "idle" as const,
   exportUrls: {},
+  activeTab: "uppercase" as CharSet,
 };
 
 export const useFontStore = create<FontStore>()(
@@ -168,6 +173,82 @@ export const useFontStore = create<FontStore>()(
           s.redoStack = [];
           s.currentStrokes = filtered;
         }
+      }),
+
+    setActiveTab: (tab) => set((s) => { s.activeTab = tab; }),
+
+    saveAndNext: () =>
+      set((s) => {
+        // Only save if something was actually drawn
+        if (s.currentStrokes.length > 0) {
+          s.glyphs[s.selectedChar] = JSON.stringify(s.currentStrokes);
+        }
+
+        const tabOrder: CharSet[] = ["uppercase", "lowercase", "numbers", "symbols"];
+        const currentTabIndex = tabOrder.indexOf(s.activeTab);
+        const currentChars = CHAR_SETS[s.activeTab];
+        const currentIdx = currentChars.indexOf(s.selectedChar);
+
+        let nextChar = "";
+        let nextTab = s.activeTab;
+        let found = false;
+
+        // 1. Look for undone chars AFTER current char in current tab
+        for (let i = currentIdx + 1; i < currentChars.length; i++) {
+          if (!(currentChars[i] in s.glyphs)) {
+            nextChar = currentChars[i];
+            found = true;
+            break;
+          }
+        }
+
+        // 2. Look in subsequent tabs (in order)
+        if (!found) {
+          for (let t = currentTabIndex + 1; t < tabOrder.length; t++) {
+            const tab = tabOrder[t];
+            const chars = CHAR_SETS[tab];
+            for (const char of chars) {
+              if (!(char in s.glyphs)) {
+                nextChar = char;
+                nextTab = tab;
+                found = true;
+                break;
+              }
+            }
+            if (found) break;
+          }
+        }
+
+        // 3. Wrap: look in tabs before current tab
+        if (!found) {
+          for (let t = 0; t < currentTabIndex; t++) {
+            const tab = tabOrder[t];
+            const chars = CHAR_SETS[tab];
+            for (const char of chars) {
+              if (!(char in s.glyphs)) {
+                nextChar = char;
+                nextTab = tab;
+                found = true;
+                break;
+              }
+            }
+            if (found) break;
+          }
+        }
+
+        // 4. All done — wrap to next char in current tab
+        if (!found) {
+          const nextIdx = (currentIdx + 1) % currentChars.length;
+          nextChar = currentChars[nextIdx];
+        }
+
+        // Apply changes
+        s.activeTab = nextTab;
+        s.selectedChar = nextChar;
+        const stored = s.glyphs[nextChar];
+        s.currentStrokes = stored ? JSON.parse(stored) : [];
+        s.undoStack = [];
+        s.redoStack = [];
       }),
 
     reset: () => set(() => ({ ...initialState })),

@@ -32,7 +32,11 @@ export default function CreatePage() {
       const id = await createFontProject(user.uid, name);
       setFontId(id);
       setFontName(name);
-      router.push(`/workspace/${id}`);
+      if (method === "upload") {
+        router.push(`/workspace/${id}/upload`);
+      } else {
+        router.push(`/workspace/${id}`);
+      }
     } catch (err: any) {
       console.error(err);
       setError(err?.message || "Failed to create font. Check console.");
@@ -133,9 +137,9 @@ export default function CreatePage() {
         )}
       </AnimatePresence>
 
-      {/* Create button — only for draw method */}
+      {/* Create button */}
       <AnimatePresence>
-        {method === "draw" && name.trim() && (
+        {method && name.trim() && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -146,30 +150,11 @@ export default function CreatePage() {
               disabled={creating}
               className="btn-lipi btn-primary text-base px-8 py-4"
             >
-              {creating ? "Creating..." : `Start drawing "${name}" →`}
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Upload coming soon notice */}
-      <AnimatePresence>
-        {method === "upload" && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-            className="border-2 border-lipi-border bg-lipi-lavender/30 p-6 max-w-sm"
-          >
-            <div className="font-[family-name:var(--font-caveat)] text-lg font-bold mb-1">Upload is coming soon! ✨</div>
-            <p className="font-[family-name:var(--font-space-grotesk)] text-sm text-lipi-text/70 mb-4">
-              We’re building the handwriting upload + AI extraction flow. For now, use the drawing canvas to create your font.
-            </p>
-            <button
-              onClick={() => setMethod("draw")}
-              className="btn-lipi btn-dark text-sm"
-            >
-              Switch to Draw instead →
+              {creating
+                ? "Creating..."
+                : method === "upload"
+                ? `Start uploading "${name}" →`
+                : `Start drawing "${name}" →`}
             </button>
           </motion.div>
         )}

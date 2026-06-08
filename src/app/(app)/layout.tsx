@@ -59,7 +59,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 key={href}
                 href={href}
                 className={cn(
-                  "flex flex-col items-center justify-center w-12 h-12 border-2 border-transparent transition-all",
+                  "flex flex-col items-center justify-center w-20 h-12 border-2 border-transparent transition-all",
                   isActive && "bg-lipi-green border-lipi-border shadow-[2px_2px_0px_#111]"
                 )}
               >

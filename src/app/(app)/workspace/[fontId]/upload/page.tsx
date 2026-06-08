@@ -9,12 +9,53 @@ import { useAuth } from "@/hooks/useAuth";
 import { getFontProject, saveFontProject } from "@/lib/firestore";
 import { useFontStore } from "@/store/fontStore";
 import { processHandwritingImage } from "@/lib/imageProcessor";
-import type { GlyphStrokes, CharSet } from "@/types";
-import { CHAR_SETS } from "@/types";
+import type { GlyphStrokes } from "@/types";
+import { ALL_CHARS } from "@/types";
 import { analytics } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
+import { jsPDF } from "jspdf";
 
-const TEMPLATE_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+const TEMPLATE_CHARS = ALL_CHARS;
+
+function TemplateMockup() {
+  const previewCells = [
+    { char: "A", written: true, strokes: "M 5 15 L 10 3 L 15 15 M 7 10 L 13 10" },
+    { char: "B", written: true, strokes: "M 6 3 L 6 17 C 12 17, 12 10, 6 10 C 12 10, 12 3, 6 3" },
+    { char: "C", written: true, strokes: "M 15 5 C 7 5, 5 9, 5 12 C 5 15, 7 17, 15 17" },
+    { char: "D", written: true, strokes: "M 6 3 L 6 17 C 14 17, 14 3, 6 3" },
+    { char: "E", written: false },
+    { char: "F", written: false },
+    { char: "G", written: false },
+    { char: "H", written: false },
+    { char: "I", written: false },
+    { char: "J", written: false },
+  ];
+
+  return (
+    <div className="border-2 border-lipi-border bg-white rounded-[24px] p-4 shadow-inner overflow-hidden max-w-full">
+      <div className="flex justify-between items-center text-[10px] text-lipi-muted font-bold mb-3 uppercase tracking-wide">
+        <span>Template Preview (A4 Page Grid)</span>
+        <span className="text-lipi-green font-bold">10 columns × 9 rows</span>
+      </div>
+      <div className="grid grid-cols-5 sm:grid-cols-10 gap-1.5 opacity-90">
+        {previewCells.map((cell, idx) => (
+          <div key={idx} className="border border-gray-200 aspect-[18/25] rounded-md relative p-1 flex flex-col items-center justify-between bg-lipi-cream/10">
+            <span className="text-[8px] font-bold text-gray-400 self-start leading-none">{cell.char}</span>
+            {cell.written ? (
+              <svg viewBox="0 0 20 20" className="w-8 h-8 text-lipi-text">
+                <path d={cell.strokes} fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            ) : (
+              <span className="text-[14px] text-gray-100 font-bold select-none">{cell.char}</span>
+            )}
+            <div className="absolute left-0 right-0 border-t border-dashed border-gray-100 h-0 pointer-events-none" style={{ top: "35%" }} />
+            <div className="absolute left-0 right-0 border-t border-dashed border-gray-200 h-0 pointer-events-none" style={{ top: "70%" }} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function MiniStrokePreview({ strokes }: { strokes: GlyphStrokes }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -91,45 +132,75 @@ export default function UploadPage({
       .finally(() => setLoading(false));
   }, [fontId, user]);
 
-  const generateTemplateSvgString = () => {
-    const charWidth = 37.6;
-    const boxW = 32;
-    const boxH = 50;
-    const boxY = 40;
-
-    let boxes = "";
-    TEMPLATE_CHARS.forEach((char, idx) => {
-      const x = idx * charWidth + 12;
-      boxes += `
-        <!-- Character ${char} -->
-        <text x="${x + boxW / 2}" y="28" font-family="sans-serif" font-weight="bold" font-size="12" fill="#111111" text-anchor="middle">${char}</text>
-        <rect x="${x}" y="${boxY}" width="${boxW}" height="${boxH}" fill="none" stroke="#111111" stroke-width="2" />
-        <line x1="${x}" y1="${boxY + boxH * 0.35}" x2="${x + boxW}" y2="${boxY + boxH * 0.35}" stroke="#b4b4c8" stroke-dasharray="2 2" stroke-width="1" />
-        <line x1="${x}" y1="${boxY + boxH * 0.7}" x2="${x + boxW}" y2="${boxY + boxH * 0.7}" stroke="#b4b4c8" stroke-dasharray="3 2" stroke-width="1.5" />
-        <text x="${x + boxW / 2}" y="${boxY + boxH * 0.65}" font-family="sans-serif" font-size="18" fill="#e2e8f0" text-anchor="middle">${char}</text>
-      `;
+  const handleDownloadTemplate = () => {
+    const doc = new jsPDF({
+      orientation: "portrait",
+      unit: "mm",
+      format: "a4",
     });
 
-    return `
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 110" width="1000" height="110" style="background-color: #ffffff;">
-        <rect width="1000" height="110" fill="#ffffff" stroke="#111111" stroke-width="4" />
-        <text x="500" y="16" font-family="sans-serif" font-weight="bold" font-size="9" fill="#777777" text-anchor="middle">LIPI HANDWRITING TEMPLATE — WRITE INSIDE BOXES IN BLACK INK</text>
-        ${boxes}
-      </svg>
-    `.trim();
-  };
+    // A4 dimensions: 210 x 297 mm
+    // Title
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(14);
+    doc.text("LIPI HANDWRITING TEMPLATE", 105, 12, { align: "center" });
 
-  const handleDownloadTemplate = () => {
-    const svgStr = generateTemplateSvgString();
-    const blob = new Blob([svgStr], { type: "image/svg+xml" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${fontName.toLowerCase().replace(/\s+/g, "_")}_writing_template.svg`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    // Subtitle / instructions
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7.5);
+    doc.setTextColor(100, 100, 100);
+    doc.text(
+      `Font Name: ${fontName}  |  Write inside boxes. Ensure all 4 corner calibration dots are visible in your photo.`,
+      105,
+      17,
+      { align: "center" }
+    );
+
+    // Draw 4 corner calibration dots (solid black circles, 3mm diameter)
+    doc.setFillColor(17, 17, 17);
+    doc.circle(10, 12, 1.5, "F"); // Top-Left
+    doc.circle(200, 12, 1.5, "F"); // Top-Right
+    doc.circle(10, 285, 1.5, "F"); // Bottom-Left
+    doc.circle(200, 285, 1.5, "F"); // Bottom-Right
+
+    // Grid Parameters
+    const cols = 10;
+    const rows = 9;
+    const startX = 15;
+    const startY = 22;
+    const cellW = 18;
+    const cellH = 25;
+    const gap = 3.5;
+
+    // Draw grid
+    for (let r = 0; r < rows; r++) {
+      const y = startY + r * (cellH + gap);
+      for (let c = 0; c < cols; c++) {
+        const charIdx = r * cols + c;
+        if (charIdx >= ALL_CHARS.length) continue;
+        const char = ALL_CHARS[charIdx];
+
+        const x = startX + c * cellW;
+
+        // Draw light gray box border
+        doc.setDrawColor(209, 213, 219); // #d1d5db
+        doc.setLineWidth(0.3);
+        doc.rect(x, y, cellW, cellH);
+
+        // Guidelines (mean line at 35%, base line at 70% height)
+        doc.setDrawColor(229, 231, 235); // #e5e7eb
+        doc.line(x, y + cellH * 0.35, x + cellW, y + cellH * 0.35);
+        doc.line(x, y + cellH * 0.7, x + cellW, y + cellH * 0.7);
+
+        // Letter label
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(7);
+        doc.setTextColor(156, 163, 175); // #9ca3af
+        doc.text(char, x + 1.5, y + 3);
+      }
+    }
+
+    doc.save(`${fontName.toLowerCase().replace(/\s+/g, "_")}_template.pdf`);
   };
 
   const handleDrag = (e: React.DragEvent) => {
@@ -184,9 +255,9 @@ export default function UploadPage({
       setExtractedGlyphs(glyphMap);
       analytics.trackHandwritingUploadCompleted(fileExt, file.size / (1024 * 1024));
       setFlowState("review");
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      setError("Failed to extract handwriting. Make sure your image is well-lit, not tilted, and matches the A-Z order.");
+      setError(err?.message || "Failed to extract handwriting. Make sure your image is well-lit, not tilted, and all 4 corner calibration dots are visible.");
       setFlowState("upload");
     }
   };
@@ -257,32 +328,33 @@ export default function UploadPage({
                 <h3 className="font-bold text-lg mb-3">How it works</h3>
                 <ol className="list-decimal pl-5 space-y-2 text-sm text-lipi-text/80 mb-6">
                   <li>
-                    Download our guided template or replicate it on blank white paper.
+                    <strong>Print the Template:</strong> Download and print the A4 PDF template containing boxes for all characters.
                   </li>
                   <li>
-                    Write out the uppercase letters <strong>A through Z</strong> in order from left to right on a single clean row.
+                    <strong>Write Your Characters:</strong> Fill in the characters (uppercase, lowercase, numbers, and symbols) inside their corresponding boxes using any dark pen (black, blue, red, etc.).
                   </li>
                   <li>
-                    Write in dark black ink. Make sure letters do not touch each other or the borders.
+                    <strong>Stay Inside Borders:</strong> Do not touch the box boundaries while writing. Keep letters centered.
                   </li>
                   <li>
-                    Snap a clear, well-lit photo looking straight down at the paper. Avoid angles or shadows.
+                    <strong>Keep Dots Visible:</strong> Ensure all 4 black corner calibration dots are clearly visible in your photo.
+                  </li>
+                  <li>
+                    <strong>Upload Photo:</strong> Snap a straight, well-lit photo looking directly down at the paper (avoid angles or shadows) and upload it.
                   </li>
                 </ol>
 
-                {/* SVG Visual template preview */}
+                {/* Visual template preview mockup */}
                 <div className="mb-6">
-                  <div className="text-xs font-bold text-lipi-muted uppercase mb-2">Guided Writing Layout</div>
-                  <div className="overflow-x-auto border-2 border-lipi-border bg-white rounded-lg">
-                    <div className="min-w-[800px] p-2" dangerouslySetInnerHTML={{ __html: generateTemplateSvgString() }} />
-                  </div>
+                  <div className="text-xs font-bold text-lipi-muted uppercase mb-2">Guided Template Layout</div>
+                  <TemplateMockup />
                 </div>
 
                 <button
                   onClick={handleDownloadTemplate}
-                  className="btn-lipi btn-secondary text-xs px-4 py-2"
+                  className="btn-lipi btn-secondary text-xs px-4 py-2 cursor-pointer"
                 >
-                  Download SVG Template ↓
+                  Download PDF Template ↓
                 </button>
               </div>
 

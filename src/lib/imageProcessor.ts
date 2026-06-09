@@ -47,28 +47,179 @@ function cellToStrokes(blobs: Blob[]): GlyphStrokes {
   const cellW = maxX - minX || 1;
   const cellH = maxY - minY || 1;
 
+  // Gather all pixels from all blobs in the cell
+  const allPixels: Point[] = [];
+  blobs.forEach((b) => {
+    allPixels.push(...b.pixels);
+  });
+
+  // 1. Thin the binary image of the cell using Zhang-Suen
+  const skeletonPts = thin(allPixels, minX, maxX, minY, maxY);
+
+  // 2. Trace the skeleton into individual strokes
+  const rawStrokes = traceSkeleton(skeletonPts);
+
   const strokes: GlyphStrokes = [];
 
-  blobs.forEach((b) => {
-    // Normalize each blob's pixels relative to the combined cell bounds
-    const normalized: Point[] = b.pixels.map((p) => ({
+  // 3. Normalize the traced strokes relative to the combined cell bounds
+  rawStrokes.forEach((stroke) => {
+    const normalized: Point[] = stroke.map((p) => ({
       x: ((p.x - minX) / cellW) * CANVAS_SIZE * 0.8 + CANVAS_SIZE * 0.1,
       y: ((p.y - minY) / cellH) * CANVAS_SIZE * 0.8 + CANVAS_SIZE * 0.1,
     }));
 
-    if (normalized.length === 0) return;
-
-    // Sort to create a rough stroke order
-    normalized.sort((a, b) => a.y - b.y || a.x - b.x);
-
-    // Subsample
-    const step = Math.max(1, Math.floor(normalized.length / 80));
-    const sampled = normalized.filter((_, i) => i % step === 0);
-
-    if (sampled.length > 0) {
-      strokes.push(sampled);
+    if (normalized.length > 0) {
+      strokes.push(normalized);
     }
   });
+
+  return strokes;
+}
+
+function thin(pixels: Point[], minX: number, maxX: number, minY: number, maxY: number): Point[] {
+  const w = maxX - minX + 3;
+  const h = maxY - minY + 3;
+  const grid = new Uint8Array(w * h);
+
+  pixels.forEach((p) => {
+    const x = Math.floor(p.x - minX) + 1;
+    const y = Math.floor(p.y - minY) + 1;
+    if (x >= 0 && x < w && y >= 0 && y < h) {
+      grid[y * w + x] = 1;
+    }
+  });
+
+  let changed = true;
+  const toDelete: number[] = [];
+
+  while (changed) {
+    changed = false;
+
+    for (let step = 1; step <= 2; step++) {
+      toDelete.length = 0;
+
+      for (let y = 1; y < h - 1; y++) {
+        const yw = y * w;
+        const yprevw = (y - 1) * w;
+        const ynextw = (y + 1) * w;
+
+        for (let x = 1; x < w - 1; x++) {
+          const idx = yw + x;
+          if (grid[idx] === 0) continue;
+
+          const p2 = grid[yprevw + x];
+          const p3 = grid[yprevw + x + 1];
+          const p4 = grid[yw + x + 1];
+          const p5 = grid[ynextw + x + 1];
+          const p6 = grid[ynextw + x];
+          const p7 = grid[ynextw + x - 1];
+          const p8 = grid[yw + x - 1];
+          const p9 = grid[yprevw + x - 1];
+
+          const B = p2 + p3 + p4 + p5 + p6 + p7 + p8 + p9;
+          if (B < 2 || B > 6) continue;
+
+          let A = 0;
+          if (p2 === 0 && p3 === 1) A++;
+          if (p3 === 0 && p4 === 1) A++;
+          if (p4 === 0 && p5 === 1) A++;
+          if (p5 === 0 && p6 === 1) A++;
+          if (p6 === 0 && p7 === 1) A++;
+          if (p7 === 0 && p8 === 1) A++;
+          if (p8 === 0 && p9 === 1) A++;
+          if (p9 === 0 && p2 === 1) A++;
+
+          if (A !== 1) continue;
+
+          if (step === 1) {
+            if (p2 * p4 * p6 !== 0) continue;
+            if (p4 * p6 * p8 !== 0) continue;
+          } else {
+            if (p2 * p4 * p8 !== 0) continue;
+            if (p2 * p6 * p8 !== 0) continue;
+          }
+
+          toDelete.push(idx);
+        }
+      }
+
+      if (toDelete.length > 0) {
+        toDelete.forEach((idx) => {
+          grid[idx] = 0;
+        });
+        changed = true;
+      }
+    }
+  }
+
+  const skeletonPts: Point[] = [];
+  for (let y = 1; y < h - 1; y++) {
+    for (let x = 1; x < w - 1; x++) {
+      if (grid[y * w + x] === 1) {
+        skeletonPts.push({ x: x - 1 + minX, y: y - 1 + minY });
+      }
+    }
+  }
+
+  return skeletonPts;
+}
+
+function traceSkeleton(skeletonPts: Point[]): Point[][] {
+  const pts = [...skeletonPts];
+  const strokes: Point[][] = [];
+  const getDistanceSq = (p1: Point, p2: Point) => (p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2;
+
+  while (pts.length > 0) {
+    let startIdx = 0;
+    let minNeighbors = 8;
+
+    for (let i = 0; i < pts.length; i++) {
+      let neighbors = 0;
+      for (let j = 0; j < pts.length; j++) {
+        if (i === j) continue;
+        if (getDistanceSq(pts[i], pts[j]) <= 2) {
+          neighbors++;
+        }
+      }
+      if (neighbors === 1) {
+        startIdx = i;
+        break;
+      }
+      if (neighbors < minNeighbors) {
+        minNeighbors = neighbors;
+        startIdx = i;
+      }
+    }
+
+    const stroke: Point[] = [pts.splice(startIdx, 1)[0]];
+
+    let tracking = true;
+    while (tracking) {
+      const last = stroke[stroke.length - 1];
+      let bestIdx = -1;
+      let minD = Infinity;
+
+      for (let i = 0; i < pts.length; i++) {
+        const d = getDistanceSq(last, pts[i]);
+        if (d <= 2.5 && d < minD) {
+          minD = d;
+          bestIdx = i;
+        }
+      }
+
+      if (bestIdx !== -1) {
+        stroke.push(pts.splice(bestIdx, 1)[0]);
+      } else {
+        tracking = false;
+      }
+    }
+
+    if (stroke.length >= 2) {
+      strokes.push(stroke);
+    } else if (stroke.length === 1) {
+      strokes.push([stroke[0], { x: stroke[0].x + 0.1, y: stroke[0].y + 0.1 }]);
+    }
+  }
 
   return strokes;
 }
@@ -77,7 +228,7 @@ function cellToStrokes(blobs: Blob[]): GlyphStrokes {
 export async function processHandwritingImage(
   file: File,
   mode: "template" | "sequence" = "template"
-): Promise<Record<string, GlyphStrokes>> {
+): Promise<{ glyphs: Record<string, GlyphStrokes>; rawGlyphs?: GlyphStrokes[] }> {
   const img = await loadImage(file);
   const { canvas, ctx } = createOffscreenCanvas(img);
 
@@ -101,17 +252,19 @@ export async function processHandwritingImage(
       finalBlobs.push(...mergedLine);
     });
 
-    // 4. Map sequential blobs to ALL_CHARS
+    // 4. Trace thinned centerline strokes for raw glyphs
+    const rawGlyphs = finalBlobs.map((blob) => cellToStrokes([blob]));
+
+    // 5. Map sequential blobs to ALL_CHARS for default mapping compatibility
     const glyphMap: Record<string, GlyphStrokes> = {};
     for (let i = 0; i < finalBlobs.length; i++) {
       if (i >= ALL_CHARS.length) break;
       const char = ALL_CHARS[i];
-      const strokes = cellToStrokes([finalBlobs[i]]);
-      if (strokes.length > 0) {
-        glyphMap[char] = strokes;
+      if (rawGlyphs[i].length > 0) {
+        glyphMap[char] = rawGlyphs[i];
       }
     }
-    return glyphMap;
+    return { glyphs: glyphMap, rawGlyphs };
   }
 
   if (filteredBlobs.length < 4) {
@@ -192,7 +345,7 @@ export async function processHandwritingImage(
     }
   }
 
-  return glyphMap;
+  return { glyphs: glyphMap };
 }
 
 function groupBlobsIntoLines(blobs: Blob[]): Blob[][] {

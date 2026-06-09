@@ -109,7 +109,9 @@ export default function UploadPage({
   const [loading, setLoading] = useState(true);
   const [flowState, setFlowState] = useState<"upload" | "processing" | "review">("upload");
   const [processingStep, setProcessingStep] = useState<"binarizing" | "detecting" | "mapping">("binarizing");
-  const [uploadMode, setUploadMode] = useState<"template" | "sequence">("template");
+  const [uploadMode] = useState<"template" | "sequence">("sequence");
+  const [sequenceLayout, setSequenceLayout] = useState<"block" | "pairs">("pairs");
+  const [rawGlyphs, setRawGlyphs] = useState<GlyphStrokes[]>([]);
   
   const [file, setFile] = useState<File | null>(null);
   const [dragActive, setDragActive] = useState(false);
@@ -132,77 +134,6 @@ export default function UploadPage({
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [fontId, user]);
-
-  const handleDownloadTemplate = () => {
-    const doc = new jsPDF({
-      orientation: "portrait",
-      unit: "mm",
-      format: "a4",
-    });
-
-    // A4 dimensions: 210 x 297 mm
-    // Title
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(14);
-    doc.text("LIPI HANDWRITING TEMPLATE", 105, 12, { align: "center" });
-
-    // Subtitle / instructions
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(7.5);
-    doc.setTextColor(100, 100, 100);
-    doc.text(
-      `Font Name: ${fontName}  |  Write inside boxes. Ensure all 4 corner calibration dots are visible in your photo.`,
-      105,
-      17,
-      { align: "center" }
-    );
-
-    // Draw 4 corner calibration dots (solid black circles, 3mm diameter)
-    doc.setFillColor(17, 17, 17);
-    doc.circle(10, 12, 1.5, "F"); // Top-Left
-    doc.circle(200, 12, 1.5, "F"); // Top-Right
-    doc.circle(10, 285, 1.5, "F"); // Bottom-Left
-    doc.circle(200, 285, 1.5, "F"); // Bottom-Right
-
-    // Grid Parameters
-    const cols = 10;
-    const rows = 9;
-    const startX = 15;
-    const startY = 22;
-    const cellW = 18;
-    const cellH = 25;
-    const gap = 3.5;
-
-    // Draw grid
-    for (let r = 0; r < rows; r++) {
-      const y = startY + r * (cellH + gap);
-      for (let c = 0; c < cols; c++) {
-        const charIdx = r * cols + c;
-        if (charIdx >= ALL_CHARS.length) continue;
-        const char = ALL_CHARS[charIdx];
-
-        const x = startX + c * cellW;
-
-        // Draw light gray box border
-        doc.setDrawColor(209, 213, 219); // #d1d5db
-        doc.setLineWidth(0.3);
-        doc.rect(x, y, cellW, cellH);
-
-        // Guidelines (mean line at 35%, base line at 70% height)
-        doc.setDrawColor(229, 231, 235); // #e5e7eb
-        doc.line(x, y + cellH * 0.35, x + cellW, y + cellH * 0.35);
-        doc.line(x, y + cellH * 0.7, x + cellW, y + cellH * 0.7);
-
-        // Letter label
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(7);
-        doc.setTextColor(156, 163, 175); // #9ca3af
-        doc.text(char, x + 1.5, y + 3);
-      }
-    }
-
-    doc.save(`${fontName.toLowerCase().replace(/\s+/g, "_")}_template.pdf`);
-  };
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -248,12 +179,18 @@ export default function UploadPage({
       const step1 = setTimeout(() => setProcessingStep("detecting"), 700);
       const step2 = setTimeout(() => setProcessingStep("mapping"), 1400);
 
-      const glyphMap = await processHandwritingImage(file, uploadMode);
+      const result = await processHandwritingImage(file, uploadMode);
       
       clearTimeout(step1);
       clearTimeout(step2);
 
-      setExtractedGlyphs(glyphMap);
+      setExtractedGlyphs(result.glyphs);
+      if (result.rawGlyphs) {
+        setRawGlyphs(result.rawGlyphs);
+      } else {
+        setRawGlyphs([]);
+      }
+      
       analytics.trackHandwritingUploadCompleted(fileExt, file.size / (1024 * 1024));
       setFlowState("review");
     } catch (err: any) {
@@ -266,17 +203,46 @@ export default function UploadPage({
     }
   };
 
+  const getTargetSequence = () => {
+    if (sequenceLayout === "pairs") {
+      const pairs: string[] = [];
+      for (let i = 0; i < 26; i++) {
+        pairs.push(ALL_CHARS[i]); // Uppercase
+        pairs.push(ALL_CHARS[i + 26]); // Lowercase
+      }
+      // Add numbers and symbols
+      pairs.push(...ALL_CHARS.slice(52));
+      return pairs;
+    }
+    return ALL_CHARS;
+  };
+
+  const handleRemoveGlyph = (index: number) => {
+    setRawGlyphs((prev) => prev.filter((_, idx) => idx !== index));
+  };
+
   const handleImport = async () => {
     if (!user || !fontId) return;
     setImporting(true);
     try {
       // Format the extracted glyphs as serialized JSON dictionary
       const formattedGlyphs: Record<string, string> = {};
-      Object.entries(extractedGlyphs).forEach(([char, strokes]) => {
-        if (strokes && strokes.length > 0) {
-          formattedGlyphs[char] = JSON.stringify(strokes);
-        }
-      });
+      
+      if (uploadMode === "template") {
+        Object.entries(extractedGlyphs).forEach(([char, strokes]) => {
+          if (strokes && strokes.length > 0) {
+            formattedGlyphs[char] = JSON.stringify(strokes);
+          }
+        });
+      } else {
+        const targetSeq = getTargetSequence();
+        rawGlyphs.forEach((strokes, idx) => {
+          if (idx < targetSeq.length && strokes && strokes.length > 0) {
+            const char = targetSeq[idx];
+            formattedGlyphs[char] = JSON.stringify(strokes);
+          }
+        });
+      }
 
       // Save to cloud & load store
       await saveFontProject(user.uid, fontId, { glyphs: formattedGlyphs });
@@ -301,6 +267,8 @@ export default function UploadPage({
     );
   }
 
+  const targetSequence = getTargetSequence();
+
   return (
     <div className="min-h-screen bg-lipi-cream p-4 sm:p-8 font-[family-name:var(--font-space-grotesk)]">
       <div className="max-w-4xl mx-auto">
@@ -317,40 +285,6 @@ export default function UploadPage({
           </div>
         </div>
 
-        {/* Mode Selector */}
-        {flowState === "upload" && (
-          <div className="flex gap-2 mb-6 bg-white p-1.5 rounded-[20px] border-2 border-lipi-border max-w-md shadow-brutal-sm">
-            <button
-              onClick={() => {
-                setUploadMode("template");
-                setError("");
-              }}
-              className={cn(
-                "flex-1 py-2 text-xs font-bold rounded-[14px] transition-all cursor-pointer",
-                uploadMode === "template"
-                  ? "bg-lipi-green text-white shadow-sm"
-                  : "text-lipi-muted hover:text-lipi-text"
-              )}
-            >
-              📋 Template Mode
-            </button>
-            <button
-              onClick={() => {
-                setUploadMode("sequence");
-                setError("");
-              }}
-              className={cn(
-                "flex-1 py-2 text-xs font-bold rounded-[14px] transition-all cursor-pointer",
-                uploadMode === "sequence"
-                  ? "bg-lipi-green text-white shadow-sm"
-                  : "text-lipi-muted hover:text-lipi-text"
-              )}
-            >
-              ✍️ Plain Page Mode
-            </button>
-          </div>
-        )}
-
         <AnimatePresence mode="wait">
           {/* STATE 1: UPLOAD & INSTRUCTIONS */}
           {flowState === "upload" && (
@@ -363,71 +297,32 @@ export default function UploadPage({
             >
               {/* Instructions Panel */}
               <div className="border-2 border-lipi-border bg-white p-6 rounded-[32px] shadow-brutal-sm">
-                <h3 className="font-bold text-lg mb-3">
-                  {uploadMode === "template" ? "How it works (Template Mode)" : "How it works (Plain Page Mode)"}
-                </h3>
-                {uploadMode === "template" ? (
-                  <>
-                    <ol className="list-decimal pl-5 space-y-2 text-sm text-lipi-text/80 mb-6">
-                      <li>
-                        <strong>Print the Template:</strong> Download and print the A4 PDF template containing boxes for all characters.
-                      </li>
-                      <li>
-                        <strong>Write Your Characters:</strong> Fill in the characters (uppercase, lowercase, numbers, and symbols) inside their corresponding boxes using any dark pen (black, blue, red, etc.).
-                      </li>
-                      <li>
-                        <strong>Stay Inside Borders:</strong> Do not touch the box boundaries while writing. Keep letters centered.
-                      </li>
-                      <li>
-                        <strong>Keep Dots Visible:</strong> Ensure all 4 black corner calibration dots are clearly visible in your photo.
-                      </li>
-                      <li>
-                        <strong>Upload Photo:</strong> Snap a straight, well-lit photo looking directly down at the paper (avoid angles or shadows) and upload it.
-                      </li>
-                    </ol>
+                <h3 className="font-bold text-lg mb-3">How it works</h3>
+                <ol className="list-decimal pl-5 space-y-2 text-sm text-lipi-text/80 mb-6">
+                  <li>
+                    <strong>Write in Order:</strong> Write all 80 characters in exact alphabetical/sequence order (A-Z, a-z, 0-9, and symbols) in straight horizontal rows on blank or lined paper.
+                  </li>
+                  <li>
+                    <strong>Keep Them Separated:</strong> Ensure character strokes do not touch adjacent characters. Leave clear horizontal spaces.
+                  </li>
+                  <li>
+                    <strong>Write Multi-stroke Letters Together:</strong> Write multi-part letters (like `i`, `j`, `=`, `?`) closely so the digitizer groups them as a single character.
+                  </li>
+                  <li>
+                    <strong>Capture Clearly:</strong> Take a straight, high-contrast, well-lit photo of your writing. Make sure no text lines are cut off.
+                  </li>
+                </ol>
 
-                    {/* Visual template preview mockup */}
-                    <div className="mb-6">
-                      <div className="text-xs font-bold text-lipi-muted uppercase mb-2">Guided Template Layout</div>
-                      <TemplateMockup />
-                    </div>
-
-                    <button
-                      onClick={handleDownloadTemplate}
-                      className="btn-lipi btn-secondary text-xs px-4 py-2 cursor-pointer"
-                    >
-                      Download PDF Template ↓
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <ol className="list-decimal pl-5 space-y-2 text-sm text-lipi-text/80 mb-6">
-                      <li>
-                        <strong>Write in Order:</strong> Write all 80 characters in exact alphabetical/sequence order (A-Z, a-z, 0-9, and symbols) in straight horizontal rows on blank or lined paper.
-                      </li>
-                      <li>
-                        <strong>Keep Them Separated:</strong> Ensure character strokes do not touch adjacent characters. Leave clear horizontal spaces.
-                      </li>
-                      <li>
-                        <strong>Write Multi-stroke Letters Together:</strong> Write multi-part letters (like `i`, `j`, `=`, `?`) closely so the digitizer groups them as a single character.
-                      </li>
-                      <li>
-                        <strong>Capture Clearly:</strong> Take a straight, high-contrast, well-lit photo of your writing. Make sure no text lines are cut off.
-                      </li>
-                    </ol>
-
-                    {/* Sequential Characters Reference List */}
-                    <div className="mb-6 bg-lipi-cream/10 border border-lipi-border/10 rounded-2xl p-4">
-                      <div className="text-xs font-bold text-lipi-muted uppercase mb-2">Required Writing Sequence:</div>
-                      <div className="text-xs font-mono break-all bg-white p-3 rounded-lg border border-gray-100 max-h-[80px] overflow-y-auto leading-relaxed">
-                        {ALL_CHARS.join(" ")}
-                      </div>
-                      <div className="text-[10px] text-lipi-muted mt-2">
-                        ⚠️ <strong>Important:</strong> If you skip a character or write them out of order, the character mapping will drift.
-                      </div>
-                    </div>
-                  </>
-                )}
+                {/* Sequential Characters Reference List */}
+                <div className="mb-6 bg-lipi-cream/10 border border-lipi-border/10 rounded-2xl p-4">
+                  <div className="text-xs font-bold text-lipi-muted uppercase mb-2">Required Writing Sequence:</div>
+                  <div className="text-xs font-mono break-all bg-white p-3 rounded-lg border border-gray-100 max-h-[80px] overflow-y-auto leading-relaxed">
+                    {ALL_CHARS.join(" ")}
+                  </div>
+                  <div className="text-[10px] text-lipi-muted mt-2">
+                    ⚠️ <strong>Important:</strong> If you skip a character or write them out of order, the character mapping will drift.
+                  </div>
+                </div>
               </div>
 
               {/* Upload Dropzone */}
@@ -552,28 +447,63 @@ export default function UploadPage({
               className="space-y-6"
             >
               <div className="border-2 border-lipi-border bg-white p-6 rounded-[32px] shadow-brutal-sm">
-                <h3 className="font-bold text-lg mb-1">Verify extracted letters</h3>
-                <p className="text-xs text-lipi-muted mb-6">
-                  Review the extracted vector strokes. If some letters are incorrect or empty, don&apos;t worry — you can redraw or fine-tune them inside the drawing editor.
-                </p>
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                  <div>
+                    <h3 className="font-bold text-lg mb-1">Verify extracted letters</h3>
+                    <p className="text-xs text-lipi-muted">
+                      Review the extracted vector strokes. Click ❌ on noise blobs (like title letters) to align subsequent characters.
+                    </p>
+                  </div>
+                  <div className="flex gap-1.5 bg-lipi-cream/15 p-1 rounded-xl border-2 border-lipi-border shadow-brutal-xs">
+                    <button
+                      onClick={() => setSequenceLayout("pairs")}
+                      className={cn(
+                        "px-3 py-1.5 text-xs font-bold rounded-lg cursor-pointer transition-all",
+                        sequenceLayout === "pairs" ? "bg-lipi-green text-white" : "text-lipi-muted hover:text-lipi-text"
+                      )}
+                    >
+                      Aa Bb Cc (Pairs)
+                    </button>
+                    <button
+                      onClick={() => setSequenceLayout("block")}
+                      className={cn(
+                        "px-3 py-1.5 text-xs font-bold rounded-lg cursor-pointer transition-all",
+                        sequenceLayout === "block" ? "bg-lipi-green text-white" : "text-lipi-muted hover:text-lipi-text"
+                      )}
+                    >
+                      A-Z, a-z (Block)
+                    </button>
+                  </div>
+                </div>
 
                 {/* Extracted letter preview grid */}
                 <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-9 gap-3">
-                  {TEMPLATE_CHARS.map((char) => {
-                    const strokes = extractedGlyphs[char];
+                  {targetSequence.map((char, idx) => {
+                    const strokes = rawGlyphs[idx];
                     const hasData = strokes && strokes.length > 0;
 
                     return (
                       <div
-                        key={char}
+                        key={`${char}-${idx}`}
                         className={cn(
                           "relative border-2 border-lipi-border rounded-xl overflow-hidden aspect-square flex flex-col items-center justify-center p-2 bg-lipi-cream/10",
                           hasData ? "bg-white" : "border-dashed border-red-200"
                         )}
                       >
                         <span className="absolute top-1 left-1.5 text-xs font-bold text-lipi-muted">{char}</span>
+                        
+                        {hasData && (
+                          <button
+                            onClick={() => handleRemoveGlyph(idx)}
+                            className="absolute top-1 right-1 w-4 h-4 bg-red-100 hover:bg-red-200 text-red-700 rounded-full flex items-center justify-center text-[8px] font-bold cursor-pointer transition-colors"
+                            title="Skip this stroke (shifts subsequent letters left)"
+                          >
+                            ❌
+                          </button>
+                        )}
+
                         {hasData ? (
-                          <div className="w-10 h-10">
+                          <div className="w-10 h-10 mt-2">
                             <MiniStrokePreview strokes={strokes} />
                           </div>
                         ) : (

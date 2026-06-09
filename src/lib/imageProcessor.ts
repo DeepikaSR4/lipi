@@ -75,7 +75,8 @@ function cellToStrokes(blobs: Blob[]): GlyphStrokes {
 
 /** Convert an image file containing handwriting into glyph strokes */
 export async function processHandwritingImage(
-  file: File
+  file: File,
+  mode: "template" | "sequence" = "template"
 ): Promise<Record<string, GlyphStrokes>> {
   const img = await loadImage(file);
   const { canvas, ctx } = createOffscreenCanvas(img);
@@ -88,6 +89,30 @@ export async function processHandwritingImage(
 
   // Filter out blobs that are too small to be characters or dots (noise)
   const filteredBlobs = blobs.filter((b) => b.pixels.length >= 40);
+
+  if (mode === "sequence") {
+    // 2. Group blobs into text lines
+    const linesOfBlobs = groupBlobsIntoLines(filteredBlobs);
+
+    // 3. For each line, merge component blobs (e.g. for i, j, =, ?, etc.)
+    const finalBlobs: Blob[] = [];
+    linesOfBlobs.forEach((line) => {
+      const mergedLine = mergeNearbyBlobs(line);
+      finalBlobs.push(...mergedLine);
+    });
+
+    // 4. Map sequential blobs to ALL_CHARS
+    const glyphMap: Record<string, GlyphStrokes> = {};
+    for (let i = 0; i < finalBlobs.length; i++) {
+      if (i >= ALL_CHARS.length) break;
+      const char = ALL_CHARS[i];
+      const strokes = cellToStrokes([finalBlobs[i]]);
+      if (strokes.length > 0) {
+        glyphMap[char] = strokes;
+      }
+    }
+    return glyphMap;
+  }
 
   if (filteredBlobs.length < 4) {
     throw new Error("Could not find calibration markers. Make sure the page is fully visible and has 4 black corner dots.");
@@ -168,6 +193,104 @@ export async function processHandwritingImage(
   }
 
   return glyphMap;
+}
+
+function groupBlobsIntoLines(blobs: Blob[]): Blob[][] {
+  if (blobs.length === 0) return [];
+
+  const centroids = blobs.map((b) => {
+    const cx = (b.minX + b.maxX) / 2;
+    const cy = (b.minY + b.maxY) / 2;
+    const height = b.maxY - b.minY;
+    return { blob: b, cx, cy, height };
+  });
+
+  // Sort by Y coordinate (top-to-bottom)
+  centroids.sort((a, b) => a.cy - b.cy);
+
+  const lines: typeof centroids[] = [];
+
+  centroids.forEach((item) => {
+    let foundLine = false;
+    for (let i = lines.length - 1; i >= 0; i--) {
+      const line = lines[i];
+      const avgY = line.reduce((sum, c) => sum + c.cy, 0) / line.length;
+      const avgH = line.reduce((sum, c) => sum + c.height, 0) / line.length;
+
+      // Group if the vertical distance is small compared to typical character height
+      const verticalDist = Math.abs(item.cy - avgY);
+      if (verticalDist < avgH * 0.8) {
+        line.push(item);
+        foundLine = true;
+        break;
+      }
+    }
+
+    if (!foundLine) {
+      lines.push([item]);
+    }
+  });
+
+  // Sort lines top-to-bottom based on their average cy
+  lines.sort((a, b) => {
+    const avgA = a.reduce((sum, c) => sum + c.cy, 0) / a.length;
+    const avgB = b.reduce((sum, c) => sum + c.cy, 0) / b.length;
+    return avgA - avgB;
+  });
+
+  // Within each line, sort elements left-to-right (by cx)
+  lines.forEach((line) => {
+    line.sort((a, b) => a.cx - b.cx);
+  });
+
+  return lines.map((line) => line.map((item) => item.blob));
+}
+
+function mergeNearbyBlobs(lineBlobs: Blob[]): Blob[] {
+  if (lineBlobs.length <= 1) return lineBlobs;
+
+  // Sort by minX
+  lineBlobs.sort((a, b) => a.minX - b.minX);
+
+  const merged: Blob[] = [];
+
+  lineBlobs.forEach((next) => {
+    if (merged.length === 0) {
+      merged.push(next);
+      return;
+    }
+
+    const last = merged[merged.length - 1];
+
+    // Calculate horizontal overlap
+    const overlapX = Math.min(last.maxX, next.maxX) - Math.max(last.minX, next.minX);
+    const widthL = last.maxX - last.minX || 1;
+    const widthN = next.maxX - next.minX || 1;
+    const avgW = (widthL + widthN) / 2;
+
+    // Merge if overlapping or horizontal gap is tiny (less than 25% of character width)
+    const isCloseX = overlapX >= 0 || Math.abs(overlapX) < avgW * 0.25;
+
+    // Check vertical overlap or closeness
+    const overlapY = Math.min(last.maxY, next.maxY) - Math.max(last.minY, next.minY);
+    const heightL = last.maxY - last.minY || 1;
+    const heightN = next.maxY - next.minY || 1;
+    const avgH = (heightL + heightN) / 2;
+    const isCloseY = overlapY >= 0 || Math.abs(overlapY) < avgH * 1.5;
+
+    if (isCloseX && isCloseY) {
+      // Merge next into last
+      last.pixels = [...last.pixels, ...next.pixels];
+      last.minX = Math.min(last.minX, next.minX);
+      last.maxX = Math.max(last.maxX, next.maxX);
+      last.minY = Math.min(last.minY, next.minY);
+      last.maxY = Math.max(last.maxY, next.maxY);
+    } else {
+      merged.push(next);
+    }
+  });
+
+  return merged;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

@@ -109,6 +109,7 @@ export default function UploadPage({
   const [loading, setLoading] = useState(true);
   const [flowState, setFlowState] = useState<"upload" | "processing" | "review">("upload");
   const [processingStep, setProcessingStep] = useState<"binarizing" | "detecting" | "mapping">("binarizing");
+  const [uploadMode, setUploadMode] = useState<"template" | "sequence">("template");
   
   const [file, setFile] = useState<File | null>(null);
   const [dragActive, setDragActive] = useState(false);
@@ -247,7 +248,7 @@ export default function UploadPage({
       const step1 = setTimeout(() => setProcessingStep("detecting"), 700);
       const step2 = setTimeout(() => setProcessingStep("mapping"), 1400);
 
-      const glyphMap = await processHandwritingImage(file);
+      const glyphMap = await processHandwritingImage(file, uploadMode);
       
       clearTimeout(step1);
       clearTimeout(step2);
@@ -257,7 +258,10 @@ export default function UploadPage({
       setFlowState("review");
     } catch (err: any) {
       console.error(err);
-      setError(err?.message || "Failed to extract handwriting. Make sure your image is well-lit, not tilted, and all 4 corner calibration dots are visible.");
+      const defaultError = uploadMode === "template"
+        ? "Failed to extract handwriting. Make sure your image is well-lit, not tilted, and all 4 corner calibration dots are visible."
+        : "Failed to extract handwriting. Make sure your image is well-lit and characters are written clearly in rows.";
+      setError(err?.message || defaultError);
       setFlowState("upload");
     }
   };
@@ -313,6 +317,40 @@ export default function UploadPage({
           </div>
         </div>
 
+        {/* Mode Selector */}
+        {flowState === "upload" && (
+          <div className="flex gap-2 mb-6 bg-white p-1.5 rounded-[20px] border-2 border-lipi-border max-w-md shadow-brutal-sm">
+            <button
+              onClick={() => {
+                setUploadMode("template");
+                setError("");
+              }}
+              className={cn(
+                "flex-1 py-2 text-xs font-bold rounded-[14px] transition-all cursor-pointer",
+                uploadMode === "template"
+                  ? "bg-lipi-green text-white shadow-sm"
+                  : "text-lipi-muted hover:text-lipi-text"
+              )}
+            >
+              📋 Template Mode
+            </button>
+            <button
+              onClick={() => {
+                setUploadMode("sequence");
+                setError("");
+              }}
+              className={cn(
+                "flex-1 py-2 text-xs font-bold rounded-[14px] transition-all cursor-pointer",
+                uploadMode === "sequence"
+                  ? "bg-lipi-green text-white shadow-sm"
+                  : "text-lipi-muted hover:text-lipi-text"
+              )}
+            >
+              ✍️ Plain Page Mode
+            </button>
+          </div>
+        )}
+
         <AnimatePresence mode="wait">
           {/* STATE 1: UPLOAD & INSTRUCTIONS */}
           {flowState === "upload" && (
@@ -325,37 +363,71 @@ export default function UploadPage({
             >
               {/* Instructions Panel */}
               <div className="border-2 border-lipi-border bg-white p-6 rounded-[32px] shadow-brutal-sm">
-                <h3 className="font-bold text-lg mb-3">How it works</h3>
-                <ol className="list-decimal pl-5 space-y-2 text-sm text-lipi-text/80 mb-6">
-                  <li>
-                    <strong>Print the Template:</strong> Download and print the A4 PDF template containing boxes for all characters.
-                  </li>
-                  <li>
-                    <strong>Write Your Characters:</strong> Fill in the characters (uppercase, lowercase, numbers, and symbols) inside their corresponding boxes using any dark pen (black, blue, red, etc.).
-                  </li>
-                  <li>
-                    <strong>Stay Inside Borders:</strong> Do not touch the box boundaries while writing. Keep letters centered.
-                  </li>
-                  <li>
-                    <strong>Keep Dots Visible:</strong> Ensure all 4 black corner calibration dots are clearly visible in your photo.
-                  </li>
-                  <li>
-                    <strong>Upload Photo:</strong> Snap a straight, well-lit photo looking directly down at the paper (avoid angles or shadows) and upload it.
-                  </li>
-                </ol>
+                <h3 className="font-bold text-lg mb-3">
+                  {uploadMode === "template" ? "How it works (Template Mode)" : "How it works (Plain Page Mode)"}
+                </h3>
+                {uploadMode === "template" ? (
+                  <>
+                    <ol className="list-decimal pl-5 space-y-2 text-sm text-lipi-text/80 mb-6">
+                      <li>
+                        <strong>Print the Template:</strong> Download and print the A4 PDF template containing boxes for all characters.
+                      </li>
+                      <li>
+                        <strong>Write Your Characters:</strong> Fill in the characters (uppercase, lowercase, numbers, and symbols) inside their corresponding boxes using any dark pen (black, blue, red, etc.).
+                      </li>
+                      <li>
+                        <strong>Stay Inside Borders:</strong> Do not touch the box boundaries while writing. Keep letters centered.
+                      </li>
+                      <li>
+                        <strong>Keep Dots Visible:</strong> Ensure all 4 black corner calibration dots are clearly visible in your photo.
+                      </li>
+                      <li>
+                        <strong>Upload Photo:</strong> Snap a straight, well-lit photo looking directly down at the paper (avoid angles or shadows) and upload it.
+                      </li>
+                    </ol>
 
-                {/* Visual template preview mockup */}
-                <div className="mb-6">
-                  <div className="text-xs font-bold text-lipi-muted uppercase mb-2">Guided Template Layout</div>
-                  <TemplateMockup />
-                </div>
+                    {/* Visual template preview mockup */}
+                    <div className="mb-6">
+                      <div className="text-xs font-bold text-lipi-muted uppercase mb-2">Guided Template Layout</div>
+                      <TemplateMockup />
+                    </div>
 
-                <button
-                  onClick={handleDownloadTemplate}
-                  className="btn-lipi btn-secondary text-xs px-4 py-2 cursor-pointer"
-                >
-                  Download PDF Template ↓
-                </button>
+                    <button
+                      onClick={handleDownloadTemplate}
+                      className="btn-lipi btn-secondary text-xs px-4 py-2 cursor-pointer"
+                    >
+                      Download PDF Template ↓
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <ol className="list-decimal pl-5 space-y-2 text-sm text-lipi-text/80 mb-6">
+                      <li>
+                        <strong>Write in Order:</strong> Write all 80 characters in exact alphabetical/sequence order (A-Z, a-z, 0-9, and symbols) in straight horizontal rows on blank or lined paper.
+                      </li>
+                      <li>
+                        <strong>Keep Them Separated:</strong> Ensure character strokes do not touch adjacent characters. Leave clear horizontal spaces.
+                      </li>
+                      <li>
+                        <strong>Write Multi-stroke Letters Together:</strong> Write multi-part letters (like `i`, `j`, `=`, `?`) closely so the digitizer groups them as a single character.
+                      </li>
+                      <li>
+                        <strong>Capture Clearly:</strong> Take a straight, high-contrast, well-lit photo of your writing. Make sure no text lines are cut off.
+                      </li>
+                    </ol>
+
+                    {/* Sequential Characters Reference List */}
+                    <div className="mb-6 bg-lipi-cream/10 border border-lipi-border/10 rounded-2xl p-4">
+                      <div className="text-xs font-bold text-lipi-muted uppercase mb-2">Required Writing Sequence:</div>
+                      <div className="text-xs font-mono break-all bg-white p-3 rounded-lg border border-gray-100 max-h-[80px] overflow-y-auto leading-relaxed">
+                        {ALL_CHARS.join(" ")}
+                      </div>
+                      <div className="text-[10px] text-lipi-muted mt-2">
+                        ⚠️ <strong>Important:</strong> If you skip a character or write them out of order, the character mapping will drift.
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Upload Dropzone */}

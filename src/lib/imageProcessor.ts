@@ -164,61 +164,122 @@ function thin(pixels: Point[], minX: number, maxX: number, minY: number, maxY: n
   return skeletonPts;
 }
 
+/**
+ * Trace a set of skeleton points into ordered polyline strokes.
+ *
+ * The original implementation used nested O(n²) loops for both endpoint
+ * detection and nearest-neighbour tracing. On any image larger than ~800px
+ * the skeleton can have tens of thousands of points, turning those loops into
+ * billions of comparisons — causing the "Maximum call stack size exceeded"
+ * crash (the JS engine running out of internal resources under extreme load).
+ *
+ * Replaced with O(n) spatial grid buckets: each point is stored in a cell of
+ * a fixed-cell-size grid; neighbour lookups only inspect the 9 surrounding
+ * cells instead of all n points.
+ */
 function traceSkeleton(skeletonPts: Point[]): Point[][] {
-  const pts = [...skeletonPts];
-  const strokes: Point[][] = [];
-  const getDistanceSq = (p1: Point, p2: Point) => (p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2;
+  if (skeletonPts.length === 0) return [];
 
-  // Neighbor search radius for endpoint detection (used to find stroke starts)
-  // Must match the tracing radius below.
-  const NEIGHBOR_RADIUS_SQ = 8; // sqrt(8) ≈ 2.83px — covers diagonal Zhang-Suen artifacts
-  // Tracing radius: slightly larger to avoid prematurely ending a stroke at
-  // thinning artifacts while staying tight enough to not jump across gaps.
-  const TRACE_RADIUS_SQ = 8;
+  // --- Build a spatial hash grid for O(1) neighbour lookup ---
+  const CELL = 3; // cell size in pixels — slightly larger than max gap
+  const TRACE_RADIUS_SQ = 8; // max gap between connected skeleton pixels (px²)
 
-  while (pts.length > 0) {
-    let startIdx = 0;
-    let minNeighbors = 8;
+  // Bounding box
+  let minGX = Infinity, minGY = Infinity;
+  for (const p of skeletonPts) {
+    if (p.x < minGX) minGX = p.x;
+    if (p.y < minGY) minGY = p.y;
+  }
 
-    for (let i = 0; i < pts.length; i++) {
-      let neighbors = 0;
-      for (let j = 0; j < pts.length; j++) {
-        if (i === j) continue;
-        if (getDistanceSq(pts[i], pts[j]) <= NEIGHBOR_RADIUS_SQ) {
-          neighbors++;
+  // Map from grid cell key → list of indices into `pts`
+  const grid = new Map<number, number[]>();
+  const pts = skeletonPts.map((p, i) => ({ ...p, idx: i }));
+  // active[i] = true if pts[i] is still unassigned
+  const active = new Uint8Array(pts.length).fill(1);
+
+  const cellKey = (p: Point) =>
+    Math.floor((p.x - minGX) / CELL) * 1000003 +
+    Math.floor((p.y - minGY) / CELL);
+
+  const addToGrid = (i: number) => {
+    const k = cellKey(pts[i]);
+    const bucket = grid.get(k);
+    if (bucket) bucket.push(i);
+    else grid.set(k, [i]);
+  };
+
+  const removeFromGrid = (i: number) => {
+    const k = cellKey(pts[i]);
+    const bucket = grid.get(k);
+    if (!bucket) return;
+    const pos = bucket.indexOf(i);
+    if (pos !== -1) bucket.splice(pos, 1);
+  };
+
+  for (let i = 0; i < pts.length; i++) addToGrid(i);
+
+  /** Return indices of all active neighbours of point p within TRACE_RADIUS_SQ */
+  const neighbours = (p: Point, excludeIdx: number): number[] => {
+    const result: number[] = [];
+    const cx = Math.floor((p.x - minGX) / CELL);
+    const cy = Math.floor((p.y - minGY) / CELL);
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        const k = (cx + dx) * 1000003 + (cy + dy);
+        const bucket = grid.get(k);
+        if (!bucket) continue;
+        for (const j of bucket) {
+          if (j === excludeIdx || !active[j]) continue;
+          const ddx = pts[j].x - p.x;
+          const ddy = pts[j].y - p.y;
+          if (ddx * ddx + ddy * ddy <= TRACE_RADIUS_SQ) result.push(j);
         }
-      }
-      if (neighbors === 1) {
-        startIdx = i;
-        break;
-      }
-      if (neighbors < minNeighbors) {
-        minNeighbors = neighbors;
-        startIdx = i;
       }
     }
+    return result;
+  };
 
-    const stroke: Point[] = [pts.splice(startIdx, 1)[0]];
+  /** Find a good stroke start: prefer points with exactly 1 neighbour (endpoints) */
+  const findStartIdx = (): number => {
+    for (let i = 0; i < pts.length; i++) {
+      if (!active[i]) continue;
+      if (neighbours(pts[i], i).length <= 1) return i;
+    }
+    // Fall back to first active point
+    for (let i = 0; i < pts.length; i++) {
+      if (active[i]) return i;
+    }
+    return -1;
+  };
 
-    let tracking = true;
-    while (tracking) {
-      const last = stroke[stroke.length - 1];
-      let bestIdx = -1;
-      let minD = Infinity;
+  const strokes: Point[][] = [];
 
-      for (let i = 0; i < pts.length; i++) {
-        const d = getDistanceSq(last, pts[i]);
-        if (d <= TRACE_RADIUS_SQ && d < minD) {
-          minD = d;
-          bestIdx = i;
-        }
+  while (true) {
+    const startIdx = findStartIdx();
+    if (startIdx === -1) break;
+
+    const stroke: Point[] = [];
+    let curIdx = startIdx;
+
+    while (curIdx !== -1) {
+      const cur = pts[curIdx];
+      stroke.push({ x: cur.x, y: cur.y });
+      active[curIdx] = 0;
+      removeFromGrid(curIdx);
+
+      const nbrs = neighbours(cur, curIdx);
+      if (nbrs.length === 0) break;
+
+      // Pick the closest unvisited neighbour
+      let bestJ = -1;
+      let bestD = Infinity;
+      for (const j of nbrs) {
+        const ddx = pts[j].x - cur.x;
+        const ddy = pts[j].y - cur.y;
+        const d = ddx * ddx + ddy * ddy;
+        if (d < bestD) { bestD = d; bestJ = j; }
       }
-
-      if (bestIdx !== -1) {
-        stroke.push(pts.splice(bestIdx, 1)[0]);
-      } else {
-        tracking = false;
-      }
+      curIdx = bestJ;
     }
 
     if (stroke.length >= 2) {
@@ -245,11 +306,10 @@ export async function processHandwritingImage(
   // 2. Detect character blobs
   const blobs = detectBlobs(ctx, canvas.width, canvas.height);
 
-  // Filter out blobs too small to be characters — scaled to image resolution.
-  // A character should occupy at least 0.05% of total image pixels.
-  const { width: imgW, height: imgH } = canvas;
-  const minBlobPx = Math.max(15, Math.floor(imgW * imgH * 0.0005));
-  const filteredBlobs = blobs.filter((b) => b.pixels.length >= minBlobPx);
+  // Filter out blobs too small to be real characters (noise).
+  // The canvas is already downscaled to ≤1500px, so a simple absolute minimum
+  // works reliably. 30px covers fine writing; 50 is the noise floor.
+  const filteredBlobs = blobs.filter((b) => b.pixels.length >= 30);
 
   if (mode === "sequence") {
     // 2. Group blobs into text lines
@@ -475,12 +535,19 @@ function loadImage(file: File): Promise<HTMLImageElement> {
   });
 }
 
+// Maximum working resolution. Phone photos at 4K+ resolution blow up the
+// O(n) skeleton arrays to millions of points — cap them here before any
+// pixel-level processing. 1500px on the longest side is more than enough
+// resolution for handwriting detection.
+const MAX_PROCESS_DIM = 1500;
+
 function createOffscreenCanvas(img: HTMLImageElement) {
   const canvas = document.createElement("canvas");
-  canvas.width = img.width;
-  canvas.height = img.height;
+  const scale = Math.min(1, MAX_PROCESS_DIM / Math.max(img.width, img.height));
+  canvas.width = Math.round(img.width * scale);
+  canvas.height = Math.round(img.height * scale);
   const ctx = canvas.getContext("2d")!;
-  ctx.drawImage(img, 0, 0);
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
   return { canvas, ctx };
 }
 

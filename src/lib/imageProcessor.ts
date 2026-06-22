@@ -169,6 +169,13 @@ function traceSkeleton(skeletonPts: Point[]): Point[][] {
   const strokes: Point[][] = [];
   const getDistanceSq = (p1: Point, p2: Point) => (p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2;
 
+  // Neighbor search radius for endpoint detection (used to find stroke starts)
+  // Must match the tracing radius below.
+  const NEIGHBOR_RADIUS_SQ = 8; // sqrt(8) ≈ 2.83px — covers diagonal Zhang-Suen artifacts
+  // Tracing radius: slightly larger to avoid prematurely ending a stroke at
+  // thinning artifacts while staying tight enough to not jump across gaps.
+  const TRACE_RADIUS_SQ = 8;
+
   while (pts.length > 0) {
     let startIdx = 0;
     let minNeighbors = 8;
@@ -177,7 +184,7 @@ function traceSkeleton(skeletonPts: Point[]): Point[][] {
       let neighbors = 0;
       for (let j = 0; j < pts.length; j++) {
         if (i === j) continue;
-        if (getDistanceSq(pts[i], pts[j]) <= 2) {
+        if (getDistanceSq(pts[i], pts[j]) <= NEIGHBOR_RADIUS_SQ) {
           neighbors++;
         }
       }
@@ -201,7 +208,7 @@ function traceSkeleton(skeletonPts: Point[]): Point[][] {
 
       for (let i = 0; i < pts.length; i++) {
         const d = getDistanceSq(last, pts[i]);
-        if (d <= 2.5 && d < minD) {
+        if (d <= TRACE_RADIUS_SQ && d < minD) {
           minD = d;
           bestIdx = i;
         }
@@ -238,8 +245,11 @@ export async function processHandwritingImage(
   // 2. Detect character blobs
   const blobs = detectBlobs(ctx, canvas.width, canvas.height);
 
-  // Filter out blobs that are too small to be characters or dots (noise)
-  const filteredBlobs = blobs.filter((b) => b.pixels.length >= 40);
+  // Filter out blobs too small to be characters — scaled to image resolution.
+  // A character should occupy at least 0.05% of total image pixels.
+  const { width: imgW, height: imgH } = canvas;
+  const minBlobPx = Math.max(15, Math.floor(imgW * imgH * 0.0005));
+  const filteredBlobs = blobs.filter((b) => b.pixels.length >= minBlobPx);
 
   if (mode === "sequence") {
     // 2. Group blobs into text lines
@@ -415,14 +425,23 @@ function mergeNearbyBlobs(lineBlobs: Blob[]): Blob[] {
 
     const last = merged[merged.length - 1];
 
-    // Calculate horizontal overlap
+    // Calculate horizontal overlap / gap
     const overlapX = Math.min(last.maxX, next.maxX) - Math.max(last.minX, next.minX);
     const widthL = last.maxX - last.minX || 1;
     const widthN = next.maxX - next.minX || 1;
     const avgW = (widthL + widthN) / 2;
 
-    // Merge if overlapping or horizontal gap is tiny (less than 25% of character width)
-    const isCloseX = overlapX >= 0 || Math.abs(overlapX) < avgW * 0.25;
+    // Merge if overlapping OR horizontal gap is within 75% of average character width.
+    // The old 25% threshold was too tight — dotted letters (i, j) and accented
+    // characters (!, ?) have components that can be 40-70% of char width apart.
+    const isCloseX = overlapX >= 0 || Math.abs(overlapX) < avgW * 0.75;
+
+    // Guard: don't merge two blobs if the result would be unreasonably wide
+    // (wider than 2.5× the average width). This prevents adjacent narrow
+    // characters like l+i being collapsed into one glyph.
+    const combinedW =
+      Math.max(last.maxX, next.maxX) - Math.min(last.minX, next.minX);
+    const wouldBeTooWide = combinedW > avgW * 2.5;
 
     // Check vertical overlap or closeness
     const overlapY = Math.min(last.maxY, next.maxY) - Math.max(last.minY, next.minY);
@@ -431,7 +450,7 @@ function mergeNearbyBlobs(lineBlobs: Blob[]): Blob[] {
     const avgH = (heightL + heightN) / 2;
     const isCloseY = overlapY >= 0 || Math.abs(overlapY) < avgH * 1.5;
 
-    if (isCloseX && isCloseY) {
+    if (isCloseX && isCloseY && !wouldBeTooWide) {
       // Merge next into last
       last.pixels = [...last.pixels, ...next.pixels];
       last.minX = Math.min(last.minX, next.minX);
@@ -465,14 +484,75 @@ function createOffscreenCanvas(img: HTMLImageElement) {
   return { canvas, ctx };
 }
 
+/**
+ * Compute Otsu's optimal binarization threshold from the pixel luminance histogram.
+ * Much more accurate than a fixed 128 for photos with shadows or off-white paper.
+ */
+function computeOtsuThreshold(data: Uint8ClampedArray): number {
+  const hist = new Int32Array(256);
+  for (let i = 0; i < data.length; i += 4) {
+    const gray = Math.round(0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]);
+    hist[gray]++;
+  }
+
+  const total = data.length / 4;
+  let sum = 0;
+  for (let t = 0; t < 256; t++) sum += t * hist[t];
+
+  let sumB = 0;
+  let wB = 0;
+  let maxVar = 0;
+  let threshold = 128;
+
+  for (let t = 0; t < 256; t++) {
+    wB += hist[t];
+    if (wB === 0) continue;
+    const wF = total - wB;
+    if (wF === 0) break;
+    sumB += t * hist[t];
+    const mB = sumB / wB;
+    const mF = (sum - sumB) / wF;
+    const varBetween = wB * wF * (mB - mF) ** 2;
+    if (varBetween > maxVar) {
+      maxVar = varBetween;
+      threshold = t;
+    }
+  }
+
+  return threshold;
+}
+
 function binarize(ctx: CanvasRenderingContext2D, w: number, h: number) {
   const imageData = ctx.getImageData(0, 0, w, h);
   const data = imageData.data;
-  const threshold = 128;
 
+  // --- Step 1: Contrast stretch ---
+  // Find the actual min/max luminance in the image so dim/faded ink
+  // is spread across the full 0-255 range before thresholding.
+  let minGray = 255;
+  let maxGray = 0;
+  const grays = new Uint8Array(data.length / 4);
   for (let i = 0; i < data.length; i += 4) {
-    const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
-    const val = gray < threshold ? 0 : 255;
+    const g = Math.round(0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]);
+    grays[i >> 2] = g;
+    if (g < minGray) minGray = g;
+    if (g > maxGray) maxGray = g;
+  }
+  const range = maxGray - minGray || 1;
+
+  // Apply stretch back into data for Otsu computation
+  for (let i = 0; i < data.length; i += 4) {
+    const stretched = Math.round(((grays[i >> 2] - minGray) / range) * 255);
+    data[i] = data[i + 1] = data[i + 2] = stretched;
+    data[i + 3] = 255;
+  }
+
+  // --- Step 2: Otsu auto-threshold ---
+  const threshold = computeOtsuThreshold(data);
+
+  // --- Step 3: Binarize ---
+  for (let i = 0; i < data.length; i += 4) {
+    const val = data[i] < threshold ? 0 : 255;
     data[i] = data[i + 1] = data[i + 2] = val;
     data[i + 3] = 255;
   }
@@ -497,6 +577,11 @@ function detectBlobs(
   const data = imageData.data;
   const visited = new Uint8Array(w * h);
   const blobs: Blob[] = [];
+
+  // Scale minimum blob size with image resolution so the filter works
+  // correctly for both high-res phone photos and low-res thumbnails.
+  // Target: a character should occupy at least 0.05% of total pixels.
+  const minBlobSize = Math.max(15, Math.floor(w * h * 0.0005));
 
   const getPixel = (x: number, y: number) => {
     const idx = (y * w + x) * 4;
@@ -524,7 +609,8 @@ function detectBlobs(
       stack.push({ x: x + 1, y }, { x: x - 1, y }, { x, y: y + 1 }, { x, y: y - 1 });
     }
 
-    if (pixels.length < 50) return null; // Filter noise
+    // Use resolution-scaled minimum instead of hardcoded 50
+    if (pixels.length < minBlobSize) return null;
     return { pixels, minX, maxX, minY, maxY };
   };
 

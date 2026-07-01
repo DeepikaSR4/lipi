@@ -29,7 +29,7 @@ export function DrawingCanvas() {
       className="w-full max-w-full flex-shrink-0 flex items-center justify-center p-4 md:p-6 bg-lipi-cream min-w-0"
     >
       <div
-        className="canvas-wrapper"
+        className="canvas-wrapper relative"
         style={{
           width: "min(100%, 420px)",
           height: "auto",

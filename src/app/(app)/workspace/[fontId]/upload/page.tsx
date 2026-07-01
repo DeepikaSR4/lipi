@@ -109,9 +109,11 @@ export default function UploadPage({
   const [loading, setLoading] = useState(true);
   const [flowState, setFlowState] = useState<"upload" | "processing" | "review">("upload");
   const [processingStep, setProcessingStep] = useState<"binarizing" | "detecting" | "mapping">("binarizing");
-  const [uploadMode] = useState<"template" | "sequence">("sequence");
-  const [sequenceLayout, setSequenceLayout] = useState<"block" | "pairs">("pairs");
-  const [rawGlyphs, setRawGlyphs] = useState<GlyphStrokes[]>([]);
+  // uploadMode is always "sequence" — template mode is not exposed in the UI
+  const uploadMode = "sequence" as const;
+  const [sequenceLayout, setSequenceLayout] = useState<"block" | "pairs">("block");
+  // null slots represent intentionally removed glyphs; index stability is critical for correct mapping
+  const [rawGlyphs, setRawGlyphs] = useState<(GlyphStrokes | null)[]>([]);
   
   const [file, setFile] = useState<File | null>(null);
   const [dragActive, setDragActive] = useState(false);
@@ -186,7 +188,7 @@ export default function UploadPage({
 
       setExtractedGlyphs(result.glyphs);
       if (result.rawGlyphs) {
-        setRawGlyphs(result.rawGlyphs);
+        setRawGlyphs(result.rawGlyphs as (GlyphStrokes | null)[]);
       } else {
         setRawGlyphs([]);
       }
@@ -217,8 +219,10 @@ export default function UploadPage({
     return ALL_CHARS;
   };
 
+  // Mark slot as null instead of splicing — preserves all subsequent indices
+  // so the character labels stay correctly aligned after a removal.
   const handleRemoveGlyph = (index: number) => {
-    setRawGlyphs((prev) => prev.filter((_, idx) => idx !== index));
+    setRawGlyphs((prev) => prev.map((g, idx) => (idx === index ? null : g)));
   };
 
   const handleImport = async () => {
@@ -237,7 +241,8 @@ export default function UploadPage({
       } else {
         const targetSeq = getTargetSequence();
         rawGlyphs.forEach((strokes, idx) => {
-          if (idx < targetSeq.length && strokes && strokes.length > 0) {
+          // null = user deliberately removed this slot; skip it
+          if (idx < targetSeq.length && strokes !== null && strokes && strokes.length > 0) {
             const char = targetSeq[idx];
             formattedGlyphs[char] = JSON.stringify(strokes);
           }
@@ -300,7 +305,7 @@ export default function UploadPage({
                 <h3 className="font-bold text-lg mb-3">How it works</h3>
                 <ol className="list-decimal pl-5 space-y-2 text-sm text-lipi-text/80 mb-6">
                   <li>
-                    <strong>Write in Order:</strong> Write all 80 characters in exact alphabetical/sequence order (A-Z, a-z, 0-9, and symbols) in straight horizontal rows on blank or lined paper.
+                    <strong>Write in Order:</strong> Write all 81 characters in exact alphabetical/sequence order (A-Z, a-z, 0-9, and symbols) in straight horizontal rows on blank or lined paper.
                   </li>
                   <li>
                     <strong>Keep Them Separated:</strong> Ensure character strokes do not touch adjacent characters. Leave clear horizontal spaces.
@@ -447,11 +452,19 @@ export default function UploadPage({
               className="space-y-6"
             >
               <div className="border-2 border-lipi-border bg-white p-6 rounded-[32px] shadow-brutal-sm">
+                {/* Low detection warning */}
+                {rawGlyphs.length < ALL_CHARS.length && (
+                  <div className="mb-4 p-3 bg-amber-50 border-2 border-amber-300 text-xs text-amber-800 font-medium rounded-xl">
+                    ⚠️ Only <strong>{rawGlyphs.length}</strong> characters were detected (expected <strong>{ALL_CHARS.length}</strong>).
+                    {" "}This usually means some characters were too small, merged together, or the image contrast was low.
+                    {" "}Review the grid below and remove any noise blobs so the mapping stays correct.
+                  </div>
+                )}
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                   <div>
                     <h3 className="font-bold text-lg mb-1">Verify extracted letters</h3>
                     <p className="text-xs text-lipi-muted">
-                      Review the extracted vector strokes. Click ❌ on noise blobs (like title letters) to align subsequent characters.
+                      Review the extracted vector strokes. Click ❌ on any noise blob to mark that slot as empty — subsequent characters stay correctly aligned.
                     </p>
                   </div>
                   <div className="flex gap-1.5 bg-lipi-cream/15 p-1 rounded-xl border-2 border-lipi-border shadow-brutal-xs">
@@ -480,31 +493,49 @@ export default function UploadPage({
                 <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-9 gap-3">
                   {targetSequence.map((char, idx) => {
                     const strokes = rawGlyphs[idx];
-                    const hasData = strokes && strokes.length > 0;
+                    // null = intentionally removed by user; undefined = not yet detected
+                    const isRemoved = strokes === null;
+                    const hasData = !isRemoved && strokes && strokes.length > 0;
 
                     return (
                       <div
                         key={`${char}-${idx}`}
                         className={cn(
-                          "relative border-2 border-lipi-border rounded-xl overflow-hidden aspect-square flex flex-col items-center justify-center p-2 bg-lipi-cream/10",
-                          hasData ? "bg-white" : "border-dashed border-red-200"
+                          "relative border-2 rounded-xl overflow-hidden aspect-square flex flex-col items-center justify-center p-2",
+                          isRemoved
+                            ? "border-dashed border-amber-300 bg-amber-50"
+                            : hasData
+                            ? "border-lipi-border bg-white"
+                            : "border-dashed border-red-200 bg-lipi-cream/10"
                         )}
                       >
                         <span className="absolute top-1 left-1.5 text-xs font-bold text-lipi-muted">{char}</span>
-                        
+
+                        {/* Remove / restore controls */}
                         {hasData && (
                           <button
                             onClick={() => handleRemoveGlyph(idx)}
                             className="absolute top-1 right-1 w-4 h-4 bg-red-100 hover:bg-red-200 text-red-700 rounded-full flex items-center justify-center text-[8px] font-bold cursor-pointer transition-colors"
-                            title="Skip this stroke (shifts subsequent letters left)"
+                            title="Mark as empty — keeps subsequent letters correctly aligned"
                           >
-                            ❌
+                            ✕
+                          </button>
+                        )}
+                        {isRemoved && (
+                          <button
+                            onClick={() => setRawGlyphs((prev) => prev.map((g, i) => i === idx ? [] : g))}
+                            className="absolute top-1 right-1 w-4 h-4 bg-green-100 hover:bg-green-200 text-green-700 rounded-full flex items-center justify-center text-[8px] font-bold cursor-pointer transition-colors"
+                            title="Restore slot"
+                          >
+                            ↩
                           </button>
                         )}
 
-                        {hasData ? (
+                        {isRemoved ? (
+                          <span className="text-[10px] text-amber-600 font-bold uppercase tracking-wider">Skipped</span>
+                        ) : hasData ? (
                           <div className="w-10 h-10 mt-2">
-                            <MiniStrokePreview strokes={strokes} />
+                            <MiniStrokePreview strokes={strokes!} />
                           </div>
                         ) : (
                           <span className="text-[10px] text-red-500 font-bold uppercase tracking-wider">Empty</span>

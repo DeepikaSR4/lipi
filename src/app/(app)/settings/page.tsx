@@ -36,7 +36,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="p-8 max-w-2xl">
+    <div className="p-6 md:p-8 max-w-2xl flex flex-col gap-6">
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-10">
         <h1 className="font-[family-name:var(--font-cormorant)] text-4xl font-bold mb-1">Settings</h1>
         <p className="font-[family-name:var(--font-space-grotesk)] text-sm text-lipi-muted">
@@ -45,7 +45,7 @@ export default function SettingsPage() {
       </motion.div>
 
       {/* Profile section */}
-      <section className="border-2 border-lipi-border bg-white p-6 mb-6 rounded-[32px]" >
+      <section className="border-2 border-lipi-border bg-white p-6 rounded-[32px]">
         <h2 className="font-[family-name:var(--font-space-grotesk)] font-bold text-sm mb-5 pb-3 border-b-2 border-lipi-border">
           Profile
         </h2>
@@ -97,7 +97,7 @@ export default function SettingsPage() {
       </section>
 
       {/* Danger zone */}
-      <section className="border-2 border-red-300 bg-white p-6" >
+      <section className="border-2 border-red-300 bg-white p-6 rounded-[32px]">
         <h2 className="font-[family-name:var(--font-space-grotesk)] font-bold text-sm mb-3 text-red-600">
           Danger Zone
         </h2>

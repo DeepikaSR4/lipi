@@ -114,15 +114,15 @@ export default function SignupPage() {
           <form onSubmit={handleEmail} className="flex flex-col gap-4">
             <div>
               <label className="block text-xs font-semibold font-[family-name:var(--font-space-grotesk)] mb-1">Your name</label>
-              <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="Priya Sharma" className="input-brutal" />
+              <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="Priya Sharma" autoComplete="name" className="input-brutal" />
             </div>
             <div>
               <label className="block text-xs font-semibold font-[family-name:var(--font-space-grotesk)] mb-1">Email</label>
-              <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="hello@example.com" className="input-brutal" />
+              <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="hello@example.com" autoComplete="email" className="input-brutal" />
             </div>
             <div>
               <label className="block text-xs font-semibold font-[family-name:var(--font-space-grotesk)] mb-1">Password</label>
-              <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Min. 6 characters" className="input-brutal" />
+              <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Min. 6 characters" autoComplete="new-password" className="input-brutal" />
             </div>
 
             {(formError || error) && (

@@ -48,9 +48,9 @@ function cellToStrokes(blobs: Blob[]): GlyphStrokes {
   const cellH = maxY - minY || 1;
 
   // Gather all pixels from all blobs in the cell
-  const allPixels: Point[] = [];
+  let allPixels: Point[] = [];
   blobs.forEach((b) => {
-    allPixels.push(...b.pixels);
+    allPixels = allPixels.concat(b.pixels);
   });
 
   // 1. Thin the binary image of the cell using Zhang-Suen
@@ -512,7 +512,7 @@ function mergeNearbyBlobs(lineBlobs: Blob[]): Blob[] {
 
     if (isCloseX && isCloseY && !wouldBeTooWide) {
       // Merge next into last
-      last.pixels = [...last.pixels, ...next.pixels];
+      last.pixels = last.pixels.concat(next.pixels);
       last.minX = Math.min(last.minX, next.minX);
       last.maxX = Math.max(last.maxX, next.maxX);
       last.minY = Math.min(last.minY, next.minY);
@@ -546,7 +546,7 @@ function createOffscreenCanvas(img: HTMLImageElement) {
   const scale = Math.min(1, MAX_PROCESS_DIM / Math.max(img.width, img.height));
   canvas.width = Math.round(img.width * scale);
   canvas.height = Math.round(img.height * scale);
-  const ctx = canvas.getContext("2d")!;
+  const ctx = canvas.getContext("2d", { willReadFrequently: true })!;
   ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
   return { canvas, ctx };
 }

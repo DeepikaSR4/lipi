@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
@@ -21,6 +21,15 @@ export default function CreatePage() {
   const [name, setName] = useState("");
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
+  const nameSectionRef = useRef<HTMLDivElement>(null);
+
+  const selectMethod = (m: Method) => {
+    setMethod(m);
+    // Scroll the name-input section into view on the next paint
+    setTimeout(() => {
+      nameSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 50);
+  };
 
   const handleCreate = async () => {
     if (!user || !name || !method) return;
@@ -63,7 +72,7 @@ export default function CreatePage() {
           <motion.div
             whileHover={{ x: -3, y: -3, }}
             onClick={() => {
-              setMethod("draw");
+              selectMethod("draw");
               analytics.trackFontCreationMethodSelected("draw");
             }}
             className={`border-2 border-lipi-border p-6 cursor-pointer transition-colors ${method === "draw" ? "bg-lipi-green" : "bg-white hover:bg-lipi-green/10"}`}
@@ -83,7 +92,7 @@ export default function CreatePage() {
           <motion.div
             whileHover={{ x: -3, y: -3, }}
             onClick={() => {
-              setMethod("upload");
+              selectMethod("upload");
               analytics.trackFontCreationMethodSelected("upload");
             }}
             className={`border-2 border-lipi-border p-6 cursor-pointer transition-colors ${method === "upload" ? "bg-lipi-green" : "bg-white hover:bg-lipi-green/10"}`}
@@ -105,10 +114,11 @@ export default function CreatePage() {
       <AnimatePresence>
         {method && (
           <motion.div
+            ref={nameSectionRef}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="mb-10"
+            className="mb-10 scroll-mt-8"
           >
             <div className="font-[family-name:var(--font-space-grotesk)] font-semibold text-sm mb-4 flex items-center gap-3">
               <span className="w-6 h-6 border-2 border-lipi-border flex items-center justify-center text-xs bg-lipi-green rounded-[32px]">2</span>

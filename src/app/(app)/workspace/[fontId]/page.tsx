@@ -30,16 +30,37 @@ export default function WorkspacePage({
   // Load project
   useEffect(() => {
     if (!user || !fontId) return;
-    getFontProject(fontId)
-      .then((project) => {
-        if (!project) { router.push("/dashboard"); return; }
-        setFontId(fontId);
-        setFontName(project.fontName);
-        loadGlyphs(project.glyphs || {});
-      })
+
+    // If we navigated here from the upload page, the store is already populated
+    // (upload page calls setFontId + setFontName + loadGlyphs before pushing).
+    // Skip the Firestore fetch to avoid a race where the write hasn't propagated yet.
+    const storeState = useFontStore.getState();
+    if (storeState.fontId === fontId && storeState.fontName) {
+      setLoading(false);
+      return;
+    }
+
+    const fetchProject = async (retries = 1) => {
+      const project = await getFontProject(fontId);
+      if (!project) {
+        if (retries > 0) {
+          // Brief delay then retry — handles Firestore write propagation lag
+          await new Promise(r => setTimeout(r, 600));
+          return fetchProject(retries - 1);
+        }
+        router.push("/dashboard");
+        return;
+      }
+      setFontId(fontId);
+      setFontName(project.fontName);
+      loadGlyphs(project.glyphs || {});
+    };
+
+    fetchProject()
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [fontId, user]);
+
 
   // Keep ref up to date
   useEffect(() => {

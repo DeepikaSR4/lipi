@@ -43,7 +43,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-lipi-cream flex flex-col md:flex-row relative">
       <Sidebar />
       <main className={cn(
-        "flex-1 ml-0 md:ml-14 min-h-screen min-w-0 overflow-x-hidden",
+        "flex-1 ml-0 md:ml-14 h-screen min-w-0 overflow-x-hidden overflow-y-auto",
         isWorkspace ? "pb-0" : "pb-16 md:pb-0"
       )}>
         {children}

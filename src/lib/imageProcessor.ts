@@ -319,7 +319,7 @@ export async function processHandwritingImage(
     const finalBlobs: Blob[] = [];
     linesOfBlobs.forEach((line) => {
       const mergedLine = mergeNearbyBlobs(line);
-      finalBlobs.push(...mergedLine);
+      mergedLine.forEach(b => finalBlobs.push(b));
     });
 
     // 4. Trace thinned centerline strokes for raw glyphs

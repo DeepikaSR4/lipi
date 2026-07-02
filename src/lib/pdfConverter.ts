@@ -13,9 +13,8 @@ export async function pdfToImageFile(pdfFile: File, scale = 3): Promise<File> {
   // Dynamic import keeps PDF.js out of the main bundle
   const pdfjsLib = await import("pdfjs-dist");
 
-  // Point the worker at the bundled worker from node_modules
-  // Using a CDN URL avoids complex Webpack/Turbopack worker config.
-  pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
+  // Point the worker at the local static file served from public/
+  pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
 
   const arrayBuffer = await pdfFile.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;

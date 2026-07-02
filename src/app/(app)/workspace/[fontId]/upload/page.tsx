@@ -196,11 +196,7 @@ export default function UploadPage({
       analytics.trackHandwritingUploadCompleted(fileExt, file.size / (1024 * 1024));
       setFlowState("review");
     } catch (err: any) {
-      console.error(err);
-      const defaultError = uploadMode === "template"
-        ? "Failed to extract handwriting. Make sure your image is well-lit, not tilted, and all 4 corner calibration dots are visible."
-        : "Failed to extract handwriting. Make sure your image is well-lit and characters are written clearly in rows.";
-      setError(err?.message || defaultError);
+      setError(err?.message || "Failed to extract handwriting. Make sure your image is well-lit and characters are written clearly in rows.");
       setFlowState("upload");
     }
   };

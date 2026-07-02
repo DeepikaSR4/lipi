@@ -674,6 +674,22 @@ function detectBlobs(
 
       visited[idx] = 1;
       pixels.push({ x, y });
+
+      // Early exit: if this blob is already larger than any real character
+      // could ever be, mark all remaining pixels as visited and discard.
+      // This prevents building a stack of 100k+ entries for background blobs
+      // (e.g. a dark wallpaper region), which is the root cause of the
+      // "maximum call stack size exceeded" crash.
+      if (pixels.length > maxBlobSize) {
+        // Drain remaining stack, marking visited so we don't re-enter
+        while (stack.length > 0) {
+          const p = stack.pop()!;
+          if (p.x < 0 || p.x >= w || p.y < 0 || p.y >= h) continue;
+          visited[p.y * w + p.x] = 1;
+        }
+        return null;
+      }
+
       minX = Math.min(minX, x);
       maxX = Math.max(maxX, x);
       minY = Math.min(minY, y);
@@ -682,8 +698,8 @@ function detectBlobs(
       stack.push({ x: x + 1, y }, { x: x - 1, y }, { x, y: y + 1 }, { x, y: y - 1 });
     }
 
-    // Drop blobs that are too small (noise) or too large (background regions).
-    if (pixels.length < minBlobSize || pixels.length > maxBlobSize) return null;
+    // Drop blobs that are too small (noise).
+    if (pixels.length < minBlobSize) return null;
     return { pixels, minX, maxX, minY, maxY };
   };
 

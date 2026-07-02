@@ -106,14 +106,18 @@ function strokesToOpentypePath(
 
       if (i === 0) {
         forward.push(fp0);
-        backward.unshift(bp0);
+        backward.push(bp0);
       }
 
       const fp1 = toFontCoords(p1.x + (nx * canvasSize) / metrics.unitsPerEm, p1.y + (ny * canvasSize) / metrics.unitsPerEm, canvasSize, metrics, minX, lsb);
       const bp1 = toFontCoords(p1.x - (nx * canvasSize) / metrics.unitsPerEm, p1.y - (ny * canvasSize) / metrics.unitsPerEm, canvasSize, metrics, minX, lsb);
       forward.push(fp1);
-      backward.unshift(bp1);
+      backward.push(bp1);
     }
+
+    // Reverse backward once at the end — O(n) — instead of using unshift per
+    // element which is O(n²) and crashes the call stack on long strokes.
+    backward.reverse();
 
     if (forward.length === 0) continue;
 

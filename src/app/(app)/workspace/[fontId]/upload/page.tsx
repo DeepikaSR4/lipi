@@ -9,6 +9,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { getFontProject, saveFontProject } from "@/lib/firestore";
 import { useFontStore } from "@/store/fontStore";
 import { processHandwritingImage } from "@/lib/imageProcessor";
+import { pdfToImageFile, isPdf } from "@/lib/pdfConverter";
 import type { GlyphStrokes } from "@/types";
 import { ALL_CHARS } from "@/types";
 import { analytics } from "@/lib/analytics";
@@ -152,11 +153,11 @@ export default function UploadPage({
     setDragActive(false);
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       const droppedFile = e.dataTransfer.files[0];
-      if (droppedFile.type.startsWith("image/")) {
+      if (droppedFile.type.startsWith("image/") || isPdf(droppedFile)) {
         setFile(droppedFile);
         setError("");
       } else {
-        setError("Please upload an image file (PNG/JPG).");
+        setError("Please upload an image (PNG/JPG) or PDF file.");
       }
     }
   };
@@ -180,7 +181,10 @@ export default function UploadPage({
       const step1 = setTimeout(() => setProcessingStep("detecting"), 700);
       const step2 = setTimeout(() => setProcessingStep("mapping"), 1400);
 
-      const result = await processHandwritingImage(file, uploadMode);
+      // Convert PDF to image if the user uploaded the template directly
+      const processFile = isPdf(file) ? await pdfToImageFile(file) : file;
+
+      const result = await processHandwritingImage(processFile, uploadMode);
       
       clearTimeout(step1);
       clearTimeout(step2);
@@ -434,7 +438,7 @@ export default function UploadPage({
                   <input
                     type="file"
                     id="handwriting-image-upload"
-                    accept="image/*"
+                    accept="image/*,application/pdf"
                     onChange={handleFileChange}
                     className="hidden"
                   />
@@ -463,7 +467,7 @@ export default function UploadPage({
                         <span className="font-bold text-sm text-lipi-text underline">Click to upload image</span>
                         <span className="text-sm text-lipi-text/60"> or drag and drop</span>
                       </div>
-                      <p className="text-xs text-lipi-muted">Accepts PNG, JPG, or WEBP. Max 10MB.</p>
+                      <p className="text-xs text-lipi-muted">Accepts PNG, JPG, WEBP, or PDF. Max 10MB.</p>
                     </label>
                   )}
                 </div>

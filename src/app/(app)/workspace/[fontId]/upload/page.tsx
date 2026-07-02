@@ -228,22 +228,14 @@ export default function UploadPage({
       // Format the extracted glyphs as serialized JSON dictionary
       const formattedGlyphs: Record<string, string> = {};
       
-      if (uploadMode === "template") {
-        Object.entries(extractedGlyphs).forEach(([char, strokes]) => {
-          if (strokes && strokes.length > 0) {
-            formattedGlyphs[char] = JSON.stringify(strokes);
-          }
-        });
-      } else {
-        const targetSeq = getTargetSequence();
-        rawGlyphs.forEach((strokes, idx) => {
-          // null = user deliberately removed this slot; skip it
-          if (idx < targetSeq.length && strokes !== null && strokes && strokes.length > 0) {
-            const char = targetSeq[idx];
-            formattedGlyphs[char] = JSON.stringify(strokes);
-          }
-        });
-      }
+      const targetSeq = getTargetSequence();
+      rawGlyphs.forEach((strokes, idx) => {
+        // null = user deliberately removed this slot; skip it
+        if (idx < targetSeq.length && strokes !== null && strokes && strokes.length > 0) {
+          const char = targetSeq[idx];
+          formattedGlyphs[char] = JSON.stringify(strokes);
+        }
+      });
 
       // Save to cloud & load store
       await saveFontProject(user.uid, fontId, { glyphs: formattedGlyphs });

@@ -48,9 +48,10 @@ function cellToStrokes(blobs: Blob[]): GlyphStrokes {
   const cellH = maxY - minY || 1;
 
   // Gather all pixels from all blobs in the cell
-  let allPixels: Point[] = [];
+  // Use a flat push loop — concat() makes O(n²) copies on large blobs.
+  const allPixels: Point[] = [];
   blobs.forEach((b) => {
-    allPixels = allPixels.concat(b.pixels);
+    for (let i = 0; i < b.pixels.length; i++) allPixels.push(b.pixels[i]);
   });
 
   // 1. Thin the binary image of the cell using Zhang-Suen
@@ -539,7 +540,9 @@ function loadImage(file: File): Promise<HTMLImageElement> {
 // O(n) skeleton arrays to millions of points — cap them here before any
 // pixel-level processing. 1500px on the longest side is more than enough
 // resolution for handwriting detection.
-const MAX_PROCESS_DIM = 1500;
+// 1200px is plenty for handwriting recognition and keeps skeleton arrays
+// to a manageable size even for dense/noisy phone photos.
+const MAX_PROCESS_DIM = 1200;
 
 function createOffscreenCanvas(img: HTMLImageElement) {
   const canvas = document.createElement("canvas");
@@ -645,10 +648,13 @@ function detectBlobs(
   const visited = new Uint8Array(w * h);
   const blobs: Blob[] = [];
 
-  // Scale minimum blob size with image resolution so the filter works
-  // correctly for both high-res phone photos and low-res thumbnails.
-  // Target: a character should occupy at least 0.05% of total pixels.
+  // Scale min/max blob size with image resolution.
+  // Min: a character should occupy at least 0.05% of total pixels.
+  // Max: blobs larger than 5% of the image are almost certainly background
+  //      noise (patterned wallpaper, table surface, etc.) — drop them early
+  //      so they never reach the expensive thin()/traceSkeleton() pipeline.
   const minBlobSize = Math.max(15, Math.floor(w * h * 0.0005));
+  const maxBlobSize = Math.floor(w * h * 0.05);
 
   const getPixel = (x: number, y: number) => {
     const idx = (y * w + x) * 4;
@@ -676,8 +682,8 @@ function detectBlobs(
       stack.push({ x: x + 1, y }, { x: x - 1, y }, { x, y: y + 1 }, { x, y: y - 1 });
     }
 
-    // Use resolution-scaled minimum instead of hardcoded 50
-    if (pixels.length < minBlobSize) return null;
+    // Drop blobs that are too small (noise) or too large (background regions).
+    if (pixels.length < minBlobSize || pixels.length > maxBlobSize) return null;
     return { pixels, minX, maxX, minY, maxY };
   };
 

@@ -109,8 +109,7 @@ export default function UploadPage({
   const [loading, setLoading] = useState(true);
   const [flowState, setFlowState] = useState<"upload" | "processing" | "review">("upload");
   const [processingStep, setProcessingStep] = useState<"binarizing" | "detecting" | "mapping">("binarizing");
-  // uploadMode is always "sequence" — template mode is not exposed in the UI
-  const uploadMode = "sequence" as const;
+  const [uploadMode, setUploadMode] = useState<"template" | "sequence">("template");
   const [sequenceLayout, setSequenceLayout] = useState<"block" | "pairs">("block");
   // null slots represent intentionally removed glyphs; index stability is critical for correct mapping
   const [rawGlyphs, setRawGlyphs] = useState<(GlyphStrokes | null)[]>([]);
@@ -196,7 +195,10 @@ export default function UploadPage({
       analytics.trackHandwritingUploadCompleted(fileExt, file.size / (1024 * 1024));
       setFlowState("review");
     } catch (err: any) {
-      setError(err?.message || "Failed to extract handwriting. Make sure your image is well-lit and characters are written clearly in rows.");
+      const defaultErr = uploadMode === "template"
+        ? "Could not find calibration markers. Make sure all 4 corner dots are visible and the page is flat and well-lit."
+        : "Failed to extract handwriting. Make sure the image is well-lit and characters are written in clear rows.";
+      setError(err?.message || defaultErr);
       setFlowState("upload");
     }
   };
@@ -205,14 +207,72 @@ export default function UploadPage({
     if (sequenceLayout === "pairs") {
       const pairs: string[] = [];
       for (let i = 0; i < 26; i++) {
-        pairs.push(ALL_CHARS[i]); // Uppercase
-        pairs.push(ALL_CHARS[i + 26]); // Lowercase
+        pairs.push(ALL_CHARS[i]);
+        pairs.push(ALL_CHARS[i + 26]);
       }
-      // Add numbers and symbols
-      pairs.push(...ALL_CHARS.slice(52));
+      ALL_CHARS.slice(52).forEach(c => pairs.push(c));
       return pairs;
     }
     return ALL_CHARS;
+  };
+
+  /** Generate and download a calibration-dot grid PDF.
+   *  Dot / grid positions MUST match the constants in imageProcessor.ts. */
+  const downloadTemplate = () => {
+    const doc = new jsPDF({ unit: "mm", format: "a4" });
+
+    // White background
+    doc.setFillColor(255, 255, 255);
+    doc.rect(0, 0, 210, 297, "F");
+
+    // Header
+    doc.setFontSize(7);
+    doc.setTextColor(120, 120, 120);
+    doc.text(
+      "Lipi Handwriting Template — fill every box in order, then photograph and upload",
+      105, 6.5, { align: "center" }
+    );
+
+    // ── 4 calibration corner dots ──────────────────────────────────────
+    // These exact coordinates are parsed by imageProcessor.ts — do not move them.
+    doc.setFillColor(0, 0, 0);
+    doc.circle(10,  12,  2, "F"); // top-left
+    doc.circle(200, 12,  2, "F"); // top-right
+    doc.circle(10,  285, 2, "F"); // bottom-left
+    doc.circle(200, 285, 2, "F"); // bottom-right
+
+    // ── Character grid (10 cols × 9 rows = 90 cells) ──────────────────
+    const gridLeft = 15;
+    const gridTop  = 22;
+    const cellW    = 18;       // 180mm / 10
+    const cellH    = 254.5 / 9; // ≈ 28.28mm
+
+    for (let r = 0; r < 9; r++) {
+      for (let c = 0; c < 10; c++) {
+        const idx = r * 10 + c;
+        const x   = gridLeft + c * cellW;
+        const y   = gridTop  + r * cellH;
+
+        // Cell border
+        doc.setDrawColor(180, 180, 180);
+        doc.setLineWidth(0.25);
+        doc.rect(x, y, cellW, cellH);
+
+        // Baseline guide (70% down)
+        doc.setDrawColor(210, 220, 255);
+        doc.setLineWidth(0.15);
+        doc.line(x + 1, y + cellH * 0.7, x + cellW - 1, y + cellH * 0.7);
+
+        // Character label (top-left corner, greyed out as guide)
+        if (idx < ALL_CHARS.length) {
+          doc.setFontSize(4.5);
+          doc.setTextColor(190, 190, 190);
+          doc.text(ALL_CHARS[idx], x + 1.2, y + 3.8);
+        }
+      }
+    }
+
+    doc.save("lipi-handwriting-template.pdf");
   };
 
   // Mark slot as null instead of splicing — preserves all subsequent indices
@@ -228,14 +288,22 @@ export default function UploadPage({
       // Format the extracted glyphs as serialized JSON dictionary
       const formattedGlyphs: Record<string, string> = {};
       
-      const targetSeq = getTargetSequence();
-      rawGlyphs.forEach((strokes, idx) => {
-        // null = user deliberately removed this slot; skip it
-        if (idx < targetSeq.length && strokes !== null && strokes && strokes.length > 0) {
-          const char = targetSeq[idx];
-          formattedGlyphs[char] = JSON.stringify(strokes);
-        }
-      });
+      if (uploadMode === "template") {
+        Object.entries(extractedGlyphs).forEach(([char, strokes]) => {
+          if (strokes && strokes.length > 0) {
+            formattedGlyphs[char] = JSON.stringify(strokes);
+          }
+        });
+      } else {
+        const targetSeq = getTargetSequence();
+        rawGlyphs.forEach((strokes, idx) => {
+          // null = user deliberately removed this slot; skip it
+          if (idx < targetSeq.length && strokes !== null && strokes && strokes.length > 0) {
+            const char = targetSeq[idx];
+            formattedGlyphs[char] = JSON.stringify(strokes);
+          }
+        });
+      }
 
       // Save to cloud & load store
       await saveFontProject(user.uid, fontId, { glyphs: formattedGlyphs });
@@ -288,34 +356,67 @@ export default function UploadPage({
               exit={{ opacity: 0, y: -15 }}
               className="space-y-6"
             >
-              {/* Instructions Panel */}
-              <div className="border-2 border-lipi-border bg-white p-6 rounded-[32px] shadow-brutal-sm">
-                <h3 className="font-bold text-lg mb-3">How it works</h3>
-                <ol className="list-decimal pl-5 space-y-2 text-sm text-lipi-text/80 mb-6">
-                  <li>
-                    <strong>Write in Order:</strong> Write all 81 characters in exact alphabetical/sequence order (A-Z, a-z, 0-9, and symbols) in straight horizontal rows on blank or lined paper.
-                  </li>
-                  <li>
-                    <strong>Keep Them Separated:</strong> Ensure character strokes do not touch adjacent characters. Leave clear horizontal spaces.
-                  </li>
-                  <li>
-                    <strong>Write Multi-stroke Letters Together:</strong> Write multi-part letters (like `i`, `j`, `=`, `?`) closely so the digitizer groups them as a single character.
-                  </li>
-                  <li>
-                    <strong>Capture Clearly:</strong> Take a straight, high-contrast, well-lit photo of your writing. Make sure no text lines are cut off.
-                  </li>
-                </ol>
-
-                {/* Sequential Characters Reference List */}
-                <div className="mb-6 bg-lipi-cream/10 border border-lipi-border/10 rounded-2xl p-4">
-                  <div className="text-xs font-bold text-lipi-muted uppercase mb-2">Required Writing Sequence:</div>
-                  <div className="text-xs font-mono break-all bg-white p-3 rounded-lg border border-gray-100 max-h-[80px] overflow-y-auto leading-relaxed">
-                    {ALL_CHARS.join(" ")}
-                  </div>
-                  <div className="text-[10px] text-lipi-muted mt-2">
-                    ⚠️ <strong>Important:</strong> If you skip a character or write them out of order, the character mapping will drift.
-                  </div>
+              {/* Mode selector */}
+              <div className="border-2 border-lipi-border bg-white p-5 rounded-[32px] shadow-brutal-sm">
+                <h3 className="font-bold text-lg mb-4">Choose upload method</h3>
+                <div className="grid grid-cols-2 gap-3 mb-5">
+                  <button
+                    onClick={() => setUploadMode("template")}
+                    className={cn(
+                      "p-4 rounded-2xl border-2 text-left transition-all cursor-pointer",
+                      uploadMode === "template"
+                        ? "border-lipi-border bg-lipi-green shadow-[2px_2px_0_#111]"
+                        : "border-lipi-border/30 bg-lipi-cream/20 hover:bg-lipi-cream/50"
+                    )}
+                  >
+                    <div className="text-xl mb-1">📄</div>
+                    <div className="font-bold text-sm">Template <span className="text-[10px] font-normal bg-lipi-border text-white px-1.5 py-0.5 rounded-full ml-1">Recommended</span></div>
+                    <div className="text-xs text-lipi-muted mt-1">Download a grid template, fill it in, photograph and upload. Most accurate.</div>
+                  </button>
+                  <button
+                    onClick={() => setUploadMode("sequence")}
+                    className={cn(
+                      "p-4 rounded-2xl border-2 text-left transition-all cursor-pointer",
+                      uploadMode === "sequence"
+                        ? "border-lipi-border bg-lipi-green shadow-[2px_2px_0_#111]"
+                        : "border-lipi-border/30 bg-lipi-cream/20 hover:bg-lipi-cream/50"
+                    )}
+                  >
+                    <div className="text-xl mb-1">✍️</div>
+                    <div className="font-bold text-sm">Freehand Sequence</div>
+                    <div className="text-xs text-lipi-muted mt-1">Write all characters in rows on plain paper. Works best on a white background.</div>
+                  </button>
                 </div>
+
+                {uploadMode === "template" ? (
+                  <div className="space-y-4">
+                    <ol className="list-decimal pl-5 space-y-1.5 text-sm text-lipi-text/80">
+                      <li><strong>Download</strong> the template PDF below.</li>
+                      <li><strong>Print</strong> it on plain white paper.</li>
+                      <li><strong>Fill in</strong> each box with the character shown in its corner — write clearly, stay inside the box.</li>
+                      <li><strong>Photograph</strong> the filled sheet flat and well-lit — all 4 corner dots must be visible.</li>
+                      <li><strong>Upload</strong> the photo below.</li>
+                    </ol>
+                    <button
+                      onClick={downloadTemplate}
+                      className="btn-lipi btn-dark text-sm px-5 py-2.5 w-full justify-center"
+                    >
+                      ⬇ Download Handwriting Template PDF
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <ol className="list-decimal pl-5 space-y-1.5 text-sm text-lipi-text/80">
+                      <li><strong>Write in Order:</strong> All 81 characters in exact sequence (A–Z, a–z, 0–9, symbols) in horizontal rows on a white background.</li>
+                      <li><strong>Keep separated:</strong> Strokes must not touch adjacent characters.</li>
+                      <li><strong>Multi-stroke letters</strong> (i, j, ?, !, =) — keep dots/accents close to their base.</li>
+                      <li><strong>Photograph clearly:</strong> Flat, white background, good lighting, all rows visible.</li>
+                    </ol>
+                    <div className="text-xs font-mono break-all bg-lipi-cream p-3 rounded-lg border border-gray-100 max-h-[60px] overflow-y-auto leading-relaxed">
+                      {ALL_CHARS.join(" ")}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Upload Dropzone */}

@@ -363,10 +363,10 @@ export async function processHandwritingImage(
   };
 
   // Corners of the global bounding box of all centroids
-  const minCx = Math.min(...centroids.map((c) => c.cx));
-  const maxCx = Math.max(...centroids.map((c) => c.cx));
-  const minCy = Math.min(...centroids.map((c) => c.cy));
-  const maxCy = Math.max(...centroids.map((c) => c.cy));
+  const minCx = centroids.reduce((min, c) => Math.min(min, c.cx), Infinity);
+  const maxCx = centroids.reduce((max, c) => Math.max(max, c.cx), -Infinity);
+  const minCy = centroids.reduce((min, c) => Math.min(min, c.cy), Infinity);
+  const maxCy = centroids.reduce((max, c) => Math.max(max, c.cy), -Infinity);
 
   const tlDot = extractClosest(minCx, minCy, centroids);
   const trDot = extractClosest(maxCx, minCy, centroids);

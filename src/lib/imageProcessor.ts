@@ -648,12 +648,12 @@ function detectBlobs(
   const visited = new Uint8Array(w * h);
   const blobs: Blob[] = [];
 
-  // Scale min/max blob size with image resolution.
-  // Min: a character should occupy at least 0.05% of total pixels.
+  // Min: a character (or calibration dot/punctuation) can be very small.
+  // 0.00005 ensures even periods and the 2mm calibration dots survive.
   // Max: blobs larger than 5% of the image are almost certainly background
   //      noise (patterned wallpaper, table surface, etc.) — drop them early
   //      so they never reach the expensive thin()/traceSkeleton() pipeline.
-  const minBlobSize = Math.max(15, Math.floor(w * h * 0.0005));
+  const minBlobSize = Math.max(15, Math.floor(w * h * 0.00005));
   const maxBlobSize = Math.floor(w * h * 0.05);
 
   const getPixel = (x: number, y: number) => {

@@ -188,6 +188,9 @@ export default function UploadPage({
         // Fast path: extract directly from known PDF cell coordinates.
         // No blob detection, no calibration dots needed.
         extractedGlyphsResult = await extractGlyphsFromTemplatePdf(file);
+        // Populate rawGlyphs in ALL_CHARS order so the review grid renders correctly.
+        // The grid reads rawGlyphs[idx], so we need a parallel array.
+        rawGlyphsResult = ALL_CHARS.map(char => extractedGlyphsResult[char] ?? null);
       } else {
         // Convert PDF to flat image if needed, then run the blob pipeline.
         const processFile = isPdf(file) ? await pdfToImageFile(file) : file;

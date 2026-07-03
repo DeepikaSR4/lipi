@@ -27,7 +27,13 @@ export async function pdfToImageFile(pdfFile: File, scale = 3): Promise<File> {
   canvas.height = Math.round(viewport.height);
 
   const ctx = canvas.getContext("2d", { willReadFrequently: true })!;
-  await page.render({ canvasContext: ctx, viewport, canvas }).promise;
+  await page.render({ 
+    canvasContext: ctx, 
+    viewport, 
+    canvas,
+    intent: "print",
+    annotationMode: pdfjsLib.AnnotationMode.ENABLE_FORMS || 2,
+  }).promise;
 
   return new Promise<File>((resolve, reject) => {
     canvas.toBlob((blob) => {

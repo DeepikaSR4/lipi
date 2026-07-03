@@ -40,6 +40,17 @@ export async function extractGlyphsFromTemplatePdf(
   const ctx = canvas.getContext("2d", { willReadFrequently: true })!;
   const glyphMap: Record<string, GlyphStrokes> = {};
 
+  // ── DEBUG: log the rendered canvas so we can see if annotations appear ──
+  console.log(`[Lipi PDF] Canvas: ${canvas.width}×${canvas.height}px`);
+  // Downscale to 25% for a compact preview data URL
+  const dbgCanvas = document.createElement("canvas");
+  dbgCanvas.width  = Math.round(canvas.width  * 0.25);
+  dbgCanvas.height = Math.round(canvas.height * 0.25);
+  dbgCanvas.getContext("2d")!.drawImage(canvas, 0, 0, dbgCanvas.width, dbgCanvas.height);
+  console.log("[Lipi PDF] Rendered preview (open in new tab):", dbgCanvas.toDataURL("image/jpeg", 0.7));
+
+  let totalDark = 0;
+
   for (let r = 0; r < ROWS; r++) {
     for (let c = 0; c < COLS; c++) {
       const idx = r * COLS + c;
@@ -54,12 +65,16 @@ export async function extractGlyphsFromTemplatePdf(
       const ch = Math.round(mmToPx(CELL_H_MM));
 
       const cellStrokes = extractCellStrokes(ctx, x0, y0, cw, ch);
+      const darkCount = cellStrokes[0]?.length ?? 0;
+      totalDark += darkCount;
+      if (darkCount > 0) console.log(`[Lipi PDF] Cell [${r},${c}]='${char}' → ${darkCount} dark pts`);
       if (cellStrokes.length > 0) {
         glyphMap[char] = cellStrokes;
       }
     }
   }
 
+  console.log(`[Lipi PDF] Done. Total dark pts: ${totalDark}, glyphs found: ${Object.keys(glyphMap).length}`);
   return glyphMap;
 }
 

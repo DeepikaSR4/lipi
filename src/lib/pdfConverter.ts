@@ -112,9 +112,10 @@ export async function renderPdfToCanvas(pdfFile: File): Promise<HTMLCanvasElemen
 }
 
 /**
- * Extract dark strokes from a rectangular region of an already-rendered canvas.
- * Returns strokes normalised to CANVAS_SIZE coordinate space, ready for the
- * font generator.
+ * Extract vectorized strokes from a rectangular cell region.
+ * Groups dark pixels into separate strokes by detecting vertical gaps,
+ * which produces proper multi-stroke glyphs (e.g. dotted i, j) rather
+ * than a single filled silhouette.
  */
 function extractCellStrokes(
   ctx: CanvasRenderingContext2D,
@@ -124,36 +125,61 @@ function extractCellStrokes(
   const imageData = ctx.getImageData(x0, y0, cw, ch);
   const data = imageData.data;
 
-  // Collect dark pixels (< 100 luminance to catch non-black ink colours)
   type Pt = { x: number; y: number };
   const darkPts: Pt[] = [];
+  let minX = cw, maxX = 0, minY = ch, maxY = 0;
+
   for (let py = 0; py < ch; py++) {
     for (let px = 0; px < cw; px++) {
       const i = (py * cw + px) * 4;
-      const r = data[i], g = data[i + 1], b = data[i + 2], a = data[i + 3];
-      if (a < 10) continue; // transparent → skip
-      const lum = 0.299 * r + 0.587 * g + 0.114 * b;
-      // Accept anything darker than 180/255 — catches black, blue, red ink
-      if (lum < 180) darkPts.push({ x: px, y: py });
+      if (data[i + 3] < 10) continue; // transparent
+      const lum = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+      if (lum < 180) {
+        darkPts.push({ x: px, y: py });
+        if (px < minX) minX = px;
+        if (px > maxX) maxX = px;
+        if (py < minY) minY = py;
+        if (py > maxY) maxY = py;
+      }
     }
   }
 
-  if (darkPts.length < 5) return []; // empty cell
+  if (darkPts.length < 5) return [];
 
-  // Normalise to CANVAS_SIZE coordinate space (matching DrawingCanvas)
+  const blobW = maxX - minX || 1;
+  const blobH = maxY - minY || 1;
   const margin = 0.1;
+
+  // Normalise to CANVAS_SIZE coordinate space
   const normalized: Pt[] = darkPts.map((p) => ({
-    x: (p.x / cw) * CANVAS_SIZE * (1 - 2 * margin) + CANVAS_SIZE * margin,
-    y: (p.y / ch) * CANVAS_SIZE * (1 - 2 * margin) + CANVAS_SIZE * margin,
+    x: ((p.x - minX) / blobW) * CANVAS_SIZE * (1 - 2 * margin) + CANVAS_SIZE * margin,
+    y: ((p.y - minY) / blobH) * CANVAS_SIZE * (1 - 2 * margin) + CANVAS_SIZE * margin,
   }));
 
-  // Sort top-to-bottom, left-to-right and subsample to ≤ 200 pts per stroke
+  // Sort by Y then X (top-to-bottom reading order)
   normalized.sort((a, b) => a.y - b.y || a.x - b.x);
-  const step = Math.max(1, Math.floor(normalized.length / 200));
+
+  // Subsample to keep total points manageable
+  const step = Math.max(1, Math.floor(normalized.length / 300));
   const sampled = normalized.filter((_, i) => i % step === 0);
 
-  return [sampled];
+  // Split into separate strokes on large vertical gaps (handles i-dot, j-dot, etc.)
+  const GAP = CANVAS_SIZE * 0.1;
+  const strokes: GlyphStrokes = [];
+  let current: Pt[] = [sampled[0]];
+
+  for (let i = 1; i < sampled.length; i++) {
+    if (sampled[i].y - sampled[i - 1].y > GAP) {
+      if (current.length >= 2) strokes.push(current);
+      current = [];
+    }
+    current.push(sampled[i]);
+  }
+  if (current.length >= 2) strokes.push(current);
+
+  return strokes.length > 0 ? strokes : [sampled];
 }
+
 
 /**
  * Converts a PDF file to a flat PNG File for the existing image-processor

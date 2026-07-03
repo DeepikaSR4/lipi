@@ -15,6 +15,7 @@ import { ALL_CHARS } from "@/types";
 import { analytics } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
 import { jsPDF } from "jspdf";
+import { ExportCard } from "@/components/workspace/ExportCard";
 
 const TEMPLATE_CHARS = ALL_CHARS;
 
@@ -108,7 +109,7 @@ export default function UploadPage({
   const { setFontId, setFontName, loadGlyphs, fontName } = useFontStore();
 
   const [loading, setLoading] = useState(true);
-  const [flowState, setFlowState] = useState<"upload" | "processing" | "review">("upload");
+  const [flowState, setFlowState] = useState<"upload" | "processing" | "review" | "congrats">("upload");
   const [processingStep, setProcessingStep] = useState<"binarizing" | "detecting" | "mapping">("binarizing");
   const [uploadMode, setUploadMode] = useState<"template" | "sequence">("template");
   const [sequenceLayout, setSequenceLayout] = useState<"block" | "pairs">("block");
@@ -323,7 +324,7 @@ export default function UploadPage({
       loadGlyphs(formattedGlyphs);
 
       analytics.trackCharacterDetectionCompleted(Object.keys(formattedGlyphs).length);
-      router.push(`/workspace/${fontId}`);
+      setFlowState("congrats");
     } catch (err) {
       console.error(err);
       setError("Failed to import font. Check network connection.");
@@ -667,6 +668,39 @@ export default function UploadPage({
                     className="btn-lipi btn-primary text-sm px-6 py-3"
                   >
                     {importing ? "Importing..." : "Import & Open Workspace →"}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* STATE 4: CONGRATULATIONS & EXPORT */}
+          {flowState === "congrats" && (
+            <motion.div
+              key="congrats"
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="space-y-6"
+            >
+              <div className="border-2 border-lipi-border bg-white p-6 rounded-[32px] shadow-brutal-sm flex flex-col items-center">
+                <div className="text-4xl mb-4">🎉</div>
+                <h3 className="font-bold text-2xl mb-2 text-center">Your handwriting font is ready!</h3>
+                <p className="text-sm text-lipi-muted text-center mb-8 max-w-md">
+                  We've successfully extracted all the characters from your uploaded file. 
+                  You can download your font directly below, or open the workspace to review and refine individual characters.
+                </p>
+
+                <div className="w-full max-w-md">
+                  <ExportCard />
+                </div>
+
+                <div className="mt-8 flex justify-center w-full">
+                  <button
+                    onClick={() => router.push(`/workspace/${fontId}`)}
+                    className="btn-lipi btn-secondary text-sm px-8 py-3"
+                  >
+                    Open Drawing Workspace →
                   </button>
                 </div>
               </div>

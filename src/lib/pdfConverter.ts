@@ -1,40 +1,151 @@
 // src/lib/pdfConverter.ts
 "use client";
 
-/**
- * Renders the first page of a PDF file to a PNG File object using PDF.js.
- * Used so users can upload the filled Lipi handwriting template directly as a
- * PDF without needing to screenshot or photograph it.
- *
- * Scale = 3 → ~2480px wide for an A4 PDF, which is ideal for the image
- * processor pipeline (MAX_PROCESS_DIM = 1200px will downscale from here).
- */
-export async function pdfToImageFile(pdfFile: File, scale = 3): Promise<File> {
-  // Dynamic import keeps PDF.js out of the main bundle
-  const pdfjsLib = await import("pdfjs-dist");
+import type { GlyphStrokes } from "@/types";
+import { ALL_CHARS } from "@/types";
+import { CANVAS_SIZE } from "./fontGenerator";
 
-  // Point the worker at the local static file served from public/
+// ── PDF template layout constants (must match pdfConverter generateTemplatePDF) ──
+// All in mm on an A4 page (210 × 297 mm)
+const PDF_W_MM   = 210;
+const PDF_H_MM   = 297;
+const GRID_L_MM  = 15;   // grid left edge
+const GRID_T_MM  = 22;   // grid top edge
+const CELL_W_MM  = 18;   // 10 columns × 18 mm = 180 mm
+const CELL_H_MM  = 254.5 / 9; // ≈ 28.28 mm
+const COLS       = 10;
+const ROWS       = 9;
+
+// ── Rendering scale ──────────────────────────────────────────────────────────
+// Scale 4 → ~2380 px wide for an A4 PDF (595 pt × 4 = 2380 px).
+// Higher than scale=3 so small punctuation characters have enough pixels.
+const RENDER_SCALE = 4;
+
+/** Convert mm→pixels at the chosen render scale (72 dpi PDF units). */
+function mmToPx(mm: number): number {
+  return (mm / 25.4) * 72 * RENDER_SCALE;
+}
+
+/**
+ * Renders page 1 of a PDF to a canvas and extracts each template cell as a
+ * GlyphStrokes entry, mapped directly by position — no blob detection, no
+ * calibration dots required.
+ *
+ * This is the primary path for Lipi template PDFs edited on a tablet.
+ */
+export async function extractGlyphsFromTemplatePdf(
+  pdfFile: File
+): Promise<Record<string, GlyphStrokes>> {
+  const canvas = await renderPdfToCanvas(pdfFile);
+  const ctx = canvas.getContext("2d", { willReadFrequently: true })!;
+  const glyphMap: Record<string, GlyphStrokes> = {};
+
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const idx = r * COLS + c;
+      if (idx >= ALL_CHARS.length) continue;
+
+      const char = ALL_CHARS[idx];
+
+      // Cell bounds in pixels
+      const x0 = Math.round(mmToPx(GRID_L_MM + c * CELL_W_MM));
+      const y0 = Math.round(mmToPx(GRID_T_MM + r * CELL_H_MM));
+      const cw = Math.round(mmToPx(CELL_W_MM));
+      const ch = Math.round(mmToPx(CELL_H_MM));
+
+      const cellStrokes = extractCellStrokes(ctx, x0, y0, cw, ch);
+      if (cellStrokes.length > 0) {
+        glyphMap[char] = cellStrokes;
+      }
+    }
+  }
+
+  return glyphMap;
+}
+
+/**
+ * Renders page 1 of a PDF file to an HTMLCanvasElement with full annotation
+ * rendering (annotationMode = ENABLE = 1), which is required for tablet ink
+ * annotations (GoodNotes, Apple Markup, Samsung Notes, etc.).
+ */
+export async function renderPdfToCanvas(pdfFile: File): Promise<HTMLCanvasElement> {
+  const pdfjsLib = await import("pdfjs-dist");
   pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
 
   const arrayBuffer = await pdfFile.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-  const page = await pdf.getPage(1); // Only need page 1 (the template)
+  const page = await pdf.getPage(1);
 
-  const viewport = page.getViewport({ scale });
-
+  const viewport = page.getViewport({ scale: RENDER_SCALE });
   const canvas = document.createElement("canvas");
-  canvas.width = Math.round(viewport.width);
+  canvas.width  = Math.round(viewport.width);
   canvas.height = Math.round(viewport.height);
 
   const ctx = canvas.getContext("2d", { willReadFrequently: true })!;
-  await page.render({ 
-    canvasContext: ctx, 
-    viewport, 
+
+  // AnnotationMode.ENABLE = 1: renders all annotation types including ink
+  // annotations drawn with a tablet stylus.
+  await page.render({
+    canvasContext: ctx,
+    viewport,
     canvas,
     intent: "print",
-    annotationMode: pdfjsLib.AnnotationMode.ENABLE_FORMS || 2,
+    annotationMode: 1, // ENABLE – includes ink/highlight/stamp annotations
   }).promise;
 
+  return canvas;
+}
+
+/**
+ * Extract dark strokes from a rectangular region of an already-rendered canvas.
+ * Returns strokes normalised to CANVAS_SIZE coordinate space, ready for the
+ * font generator.
+ */
+function extractCellStrokes(
+  ctx: CanvasRenderingContext2D,
+  x0: number, y0: number,
+  cw: number, ch: number
+): GlyphStrokes {
+  const imageData = ctx.getImageData(x0, y0, cw, ch);
+  const data = imageData.data;
+
+  // Collect dark pixels (< 100 luminance to catch non-black ink colours)
+  type Pt = { x: number; y: number };
+  const darkPts: Pt[] = [];
+  for (let py = 0; py < ch; py++) {
+    for (let px = 0; px < cw; px++) {
+      const i = (py * cw + px) * 4;
+      const r = data[i], g = data[i + 1], b = data[i + 2], a = data[i + 3];
+      if (a < 10) continue; // transparent → skip
+      const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+      // Accept anything darker than 180/255 — catches black, blue, red ink
+      if (lum < 180) darkPts.push({ x: px, y: py });
+    }
+  }
+
+  if (darkPts.length < 5) return []; // empty cell
+
+  // Normalise to CANVAS_SIZE coordinate space (matching DrawingCanvas)
+  const margin = 0.1;
+  const normalized: Pt[] = darkPts.map((p) => ({
+    x: (p.x / cw) * CANVAS_SIZE * (1 - 2 * margin) + CANVAS_SIZE * margin,
+    y: (p.y / ch) * CANVAS_SIZE * (1 - 2 * margin) + CANVAS_SIZE * margin,
+  }));
+
+  // Sort top-to-bottom, left-to-right and subsample to ≤ 200 pts per stroke
+  normalized.sort((a, b) => a.y - b.y || a.x - b.x);
+  const step = Math.max(1, Math.floor(normalized.length / 200));
+  const sampled = normalized.filter((_, i) => i % step === 0);
+
+  return [sampled];
+}
+
+/**
+ * Converts a PDF file to a flat PNG File for the existing image-processor
+ * pipeline (used in freehand / sequence mode, or as fallback).
+ */
+export async function pdfToImageFile(pdfFile: File): Promise<File> {
+  const canvas = await renderPdfToCanvas(pdfFile);
   return new Promise<File>((resolve, reject) => {
     canvas.toBlob((blob) => {
       if (!blob) { reject(new Error("Failed to convert PDF page to image")); return; }

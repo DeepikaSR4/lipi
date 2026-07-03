@@ -9,7 +9,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { getFontProject, saveFontProject } from "@/lib/firestore";
 import { useFontStore } from "@/store/fontStore";
 import { processHandwritingImage } from "@/lib/imageProcessor";
-import { pdfToImageFile, isPdf } from "@/lib/pdfConverter";
+import { pdfToImageFile, isPdf, extractGlyphsFromTemplatePdf } from "@/lib/pdfConverter";
 import type { GlyphStrokes } from "@/types";
 import { ALL_CHARS } from "@/types";
 import { analytics } from "@/lib/analytics";
@@ -181,26 +181,32 @@ export default function UploadPage({
       const step1 = setTimeout(() => setProcessingStep("detecting"), 700);
       const step2 = setTimeout(() => setProcessingStep("mapping"), 1400);
 
-      // Convert PDF to image if the user uploaded the template directly
-      const processFile = isPdf(file) ? await pdfToImageFile(file) : file;
+      let extractedGlyphsResult: Record<string, GlyphStrokes>;
+      let rawGlyphsResult: (GlyphStrokes | null)[] = [];
 
-      const result = await processHandwritingImage(processFile, uploadMode);
-      
+      if (uploadMode === "template" && isPdf(file)) {
+        // Fast path: extract directly from known PDF cell coordinates.
+        // No blob detection, no calibration dots needed.
+        extractedGlyphsResult = await extractGlyphsFromTemplatePdf(file);
+      } else {
+        // Convert PDF to flat image if needed, then run the blob pipeline.
+        const processFile = isPdf(file) ? await pdfToImageFile(file) : file;
+        const result = await processHandwritingImage(processFile, uploadMode);
+        extractedGlyphsResult = result.glyphs;
+        rawGlyphsResult = (result.rawGlyphs as (GlyphStrokes | null)[]) ?? [];
+      }
+
       clearTimeout(step1);
       clearTimeout(step2);
 
-      setExtractedGlyphs(result.glyphs);
-      if (result.rawGlyphs) {
-        setRawGlyphs(result.rawGlyphs as (GlyphStrokes | null)[]);
-      } else {
-        setRawGlyphs([]);
-      }
-      
+      setExtractedGlyphs(extractedGlyphsResult);
+      setRawGlyphs(rawGlyphsResult);
+
       analytics.trackHandwritingUploadCompleted(fileExt, file.size / (1024 * 1024));
       setFlowState("review");
     } catch (err: any) {
       const defaultErr = uploadMode === "template"
-        ? "Could not find calibration markers. Make sure all 4 corner dots are visible and the page is flat and well-lit."
+        ? "Could not extract handwriting from the template. Make sure the PDF has visible ink strokes and was filled using a pen/stylus."
         : "Failed to extract handwriting. Make sure the image is well-lit and characters are written in clear rows.";
       setError(err?.message || defaultErr);
       setFlowState("upload");

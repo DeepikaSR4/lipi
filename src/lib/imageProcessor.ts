@@ -32,7 +32,7 @@ function getBilinearCoords(
   return { px, py };
 }
 
-function cellToStrokes(blobs: Blob[]): GlyphStrokes {
+export function cellToStrokes(blobs: Blob[]): GlyphStrokes {
   if (blobs.length === 0) return [];
 
   // Find combined bounding box of all blobs in the cell
@@ -630,7 +630,7 @@ function binarize(ctx: CanvasRenderingContext2D, w: number, h: number) {
   ctx.putImageData(imageData, 0, 0);
 }
 
-interface Blob {
+export interface Blob {
   pixels: Point[];
   minX: number;
   maxX: number;

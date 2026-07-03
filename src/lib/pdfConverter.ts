@@ -4,6 +4,8 @@
 import type { GlyphStrokes } from "@/types";
 import { ALL_CHARS } from "@/types";
 import { CANVAS_SIZE } from "./fontGenerator";
+import { cellToStrokes } from "./imageProcessor";
+import type { Blob } from "./imageProcessor";
 
 // ── PDF template layout constants (must match pdfConverter generateTemplatePDF) ──
 // All in mm on an A4 page (210 × 297 mm)
@@ -146,38 +148,15 @@ function extractCellStrokes(
 
   if (darkPts.length < 5) return [];
 
-  const blobW = maxX - minX || 1;
-  const blobH = maxY - minY || 1;
-  const margin = 0.1;
+  // Create a synthetic Blob matching what imageProcessor.ts expects
+  const syntheticBlob: Blob = {
+    minX, maxX, minY, maxY,
+    pixels: darkPts
+  };
 
-  // Normalise to CANVAS_SIZE coordinate space
-  const normalized: Pt[] = darkPts.map((p) => ({
-    x: ((p.x - minX) / blobW) * CANVAS_SIZE * (1 - 2 * margin) + CANVAS_SIZE * margin,
-    y: ((p.y - minY) / blobH) * CANVAS_SIZE * (1 - 2 * margin) + CANVAS_SIZE * margin,
-  }));
-
-  // Sort by Y then X (top-to-bottom reading order)
-  normalized.sort((a, b) => a.y - b.y || a.x - b.x);
-
-  // Subsample to keep total points manageable
-  const step = Math.max(1, Math.floor(normalized.length / 300));
-  const sampled = normalized.filter((_, i) => i % step === 0);
-
-  // Split into separate strokes on large vertical gaps (handles i-dot, j-dot, etc.)
-  const GAP = CANVAS_SIZE * 0.1;
-  const strokes: GlyphStrokes = [];
-  let current: Pt[] = [sampled[0]];
-
-  for (let i = 1; i < sampled.length; i++) {
-    if (sampled[i].y - sampled[i - 1].y > GAP) {
-      if (current.length >= 2) strokes.push(current);
-      current = [];
-    }
-    current.push(sampled[i]);
-  }
-  if (current.length >= 2) strokes.push(current);
-
-  return strokes.length > 0 ? strokes : [sampled];
+  // Run the full Zhang-Suen thinning + skeleton tracing pipeline
+  // cellToStrokes already normalizes the strokes to CANVAS_SIZE with a 10% margin!
+  return cellToStrokes([syntheticBlob]);
 }
 
 

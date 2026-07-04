@@ -107,40 +107,48 @@ function FontCard({ project, index, onDelete }: { project: FontProject; index: n
           </div>
 
           {/* Meta */}
-          <div className="p-4">
-            <div className="font-[family-name:var(--font-space-grotesk)] font-bold text-sm mb-1">
-              {project.fontName}
-            </div>
-            <div className="text-xs text-lipi-muted font-[family-name:var(--font-space-grotesk)]">
-              {glyphCount} / 62 glyphs
-            </div>
-            <div className="text-[10px] text-lipi-muted/60 font-[family-name:var(--font-space-grotesk)] mt-1">
-              Created: {formatDate(project.createdAt)} <br/>
-              Last edited: {formatDate(project.updatedAt)}
+          <div className="p-4 flex-1 flex flex-col justify-end">
+            <div>
+              <div className="font-[family-name:var(--font-space-grotesk)] font-bold text-sm mb-1">
+                {project.fontName}
+              </div>
+              <div className="text-xs text-lipi-muted font-[family-name:var(--font-space-grotesk)]">
+                {glyphCount} / 62 glyphs
+              </div>
             </div>
 
-            {/* Progress bar */}
-            <div className="mt-2 h-1 bg-lipi-border/20 border border-lipi-border/20">
-              <div
-                className="h-full bg-lipi-green"
-                style={{ width: `${(glyphCount / 62) * 100}%` }}
-              />
+            <div className="mt-auto pt-3">
+              {/* Progress bar */}
+              <div className="h-1 bg-lipi-border/20 border border-lipi-border/20 mb-2">
+                <div
+                  className="h-full bg-lipi-green"
+                  style={{ width: `${(glyphCount / 62) * 100}%` }}
+                />
+              </div>
+
+              <div className="flex items-center justify-between text-[9px] text-lipi-muted/60 font-[family-name:var(--font-space-grotesk)]">
+                <span>Created {formatDate(project.createdAt)}</span>
+                <span>Edited {formatDate(project.updatedAt)}</span>
+              </div>
             </div>
           </div>
         </Link>
 
         {/* Actions */}
-        <div className="px-4 pb-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="px-4 pb-4 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
           <Link
             href={`/preview/${project.id}`}
-            className="text-xs font-[family-name:var(--font-space-grotesk)] underline underline-offset-2"
+            className="text-xs font-[family-name:var(--font-space-grotesk)] text-lipi-text underline underline-offset-2 hover:text-lipi-green transition-colors"
           >
             Preview
           </Link>
-          <span className="text-lipi-muted">·</span>
+          <span className="text-lipi-muted text-xs">·</span>
           <button
-            onClick={onDelete}
-            className="text-xs font-[family-name:var(--font-space-grotesk)] text-red-500 underline underline-offset-2 cursor-pointer"
+            onClick={(e) => {
+              e.preventDefault(); // prevent any bubbling if needed
+              onDelete();
+            }}
+            className="text-xs font-[family-name:var(--font-space-grotesk)] text-red-500 underline underline-offset-2 hover:text-red-600 transition-colors cursor-pointer"
           >
             Delete
           </button>

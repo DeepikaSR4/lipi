@@ -12,6 +12,7 @@ import {
   orderBy,
   serverTimestamp,
   getCountFromServer,
+  increment,
 } from "firebase/firestore";
 import { db } from "./firebase";
 import type { UserProfile, FontProject } from "@/types";
@@ -104,11 +105,28 @@ export async function createFontProject(
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
+
+  // Increment the global font count stats
+  try {
+    const statsRef = doc(db, "stats", "global");
+    await setDoc(statsRef, { fontCount: increment(1) }, { merge: true });
+  } catch (err) {
+    console.error("Failed to increment font count stat:", err);
+  }
+
   return ref.id;
 }
 
 export async function deleteFontProject(fontId: string) {
   await deleteDoc(doc(db, "fonts", fontId));
+
+  // Decrement the global font count stats
+  try {
+    const statsRef = doc(db, "stats", "global");
+    await setDoc(statsRef, { fontCount: increment(-1) }, { merge: true });
+  } catch (err) {
+    console.error("Failed to decrement font count stat:", err);
+  }
 }
 
 export async function updateFontGlyphs(

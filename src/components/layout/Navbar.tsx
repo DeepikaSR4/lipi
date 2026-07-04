@@ -19,15 +19,15 @@ export function Navbar() {
       className="sticky top-0 z-50 bg-lipi-cream border-b-2 border-lipi-border flex items-center justify-between px-6 h-14"
     >
       {/* Logo */}
-      <Link href="/" className="flex items-center gap-2 group">
+      <Link href="/" className="flex items-center gap-1.5 group">
         <span
-          className="font-[family-name:var(--font-cormorant)] text-2xl font-bold tracking-tight text-lipi-text group-hover:text-lipi-dark transition-colors"
+          className="font-[family-name:var(--font-cormorant)] text-3xl font-bold tracking-tight text-[#1a3d2f] group-hover:text-lipi-dark transition-colors flex items-center"
           style={{ letterSpacing: "-0.03em" }}
         >
           lipi
-        </span>
-        <span className="text-annotation text-xs rotate-12 text-lipi-muted hidden sm:block">
-          ✦
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" className="ml-1.5 text-[#1a3d2f] group-hover:text-lipi-dark transition-colors">
+            <path d="M12 0C12 6.627 17.373 12 24 12C17.373 12 12 17.373 12 24C12 17.373 6.627 12 0 12C6.627 12 12 6.627 12 0Z" />
+          </svg>
         </span>
       </Link>
 
@@ -47,10 +47,10 @@ export function Navbar() {
             How it works
           </Link>
           <Link
-            href="#export"
+            href="#about"
             className="hover:text-lipi-dark border-b-2 border-transparent hover:border-lipi-text transition-all pb-0.5"
           >
-            Export
+            About
           </Link>
         </div>
       )}

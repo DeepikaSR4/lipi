@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { use } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
@@ -30,6 +30,8 @@ export default function PreviewPage({
   const { user } = useAuth();
   const router = useRouter();
   const { setFontId, setFontName, loadGlyphs } = useFontStore();
+  const searchParams = useSearchParams();
+  const fromUpload = searchParams.get("fromUpload") === "true";
 
   const [project, setProject] = useState<FontProject | null>(null);
   const [activeTab, setActiveTab] = useState<PreviewTab>("heading");
@@ -120,17 +122,24 @@ export default function PreviewPage({
           <Link
             href={`/workspace/${fontId}`}
             className="btn-lipi btn-secondary text-sm"
-            
           >
             Edit →
           </Link>
-          <button
-            onClick={() => setShowExport(true)}
-            className="btn-lipi btn-primary text-sm"
-            
-          >
-            Export ↓
-          </button>
+          {fromUpload ? (
+            <button
+              onClick={() => router.push(`/workspace/${fontId}/upload?congrats=true`)}
+              className="btn-lipi btn-primary text-sm"
+            >
+              Looks Good →
+            </button>
+          ) : (
+            <button
+              onClick={() => setShowExport(true)}
+              className="btn-lipi btn-primary text-sm"
+            >
+              Export ↓
+            </button>
+          )}
         </div>
       </div>
 

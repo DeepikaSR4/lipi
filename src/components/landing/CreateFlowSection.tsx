@@ -62,20 +62,20 @@ export function CreateFlowSection() {
           className="border-2 border-lipi-border bg-lipi-cream p-8 relative cursor-pointer group rounded-[32px]"
         >
           <div className="absolute -top-3 -right-3">
-            <HandwrittenNote text="AI detection" rotation={-3} color="green" />
+            <HandwrittenNote text="PDF template" rotation={-3} color="green" />
           </div>
 
           {/* Upload preview */}
           <div className="border-2 border-dashed border-lipi-border/30 bg-white mb-6 p-4 h-32 flex items-center justify-center rounded-[32px]">
             <div className="text-center">
-              <div className="text-3xl mb-1">📸</div>
-              <div className="text-xs font-[family-name:var(--font-space-grotesk)] text-lipi-muted">PNG · JPG · JPEG</div>
+              <div className="text-3xl mb-1">📄</div>
+              <div className="text-xs font-[family-name:var(--font-space-grotesk)] text-lipi-muted">PDF Template</div>
             </div>
           </div>
 
           <h3 className="font-[family-name:var(--font-cormorant)] text-3xl font-bold mb-2">Upload it</h3>
           <p className="font-[family-name:var(--font-space-grotesk)] text-sm text-lipi-text/70 mb-6">
-            Write all 26 letters on paper, photograph it, and upload. We'll detect and vectorize each character automatically.
+            Download our PDF template, write your characters on a tablet or print it out, and upload it back. We'll extract and vectorize your handwriting automatically.
           </p>
 
           <Link href="/create?method=upload" className="btn-lipi btn-dark text-sm inline-flex">

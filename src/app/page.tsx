@@ -5,6 +5,7 @@ import { FeatureStrip } from "@/components/landing/FeatureStrip";
 import { CreateFlowSection } from "@/components/landing/CreateFlowSection";
 import { WorkspaceSection } from "@/components/landing/WorkspaceSection";
 import { ExportSection } from "@/components/landing/ExportSection";
+import { AboutSection } from "@/components/landing/AboutSection";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -23,6 +24,7 @@ export default function HomePage() {
       <CreateFlowSection />
       <WorkspaceSection />
       <ExportSection />
+      <AboutSection />
 
       {/* Footer */}
       <footer className="border-t-2 border-lipi-border bg-lipi-text text-lipi-cream px-6 py-8">

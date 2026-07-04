@@ -12,6 +12,7 @@ import { Toolbar } from "@/components/workspace/Toolbar";
 import { DrawingCanvas } from "@/components/workspace/DrawingCanvas";
 import { CharacterGrid } from "@/components/workspace/CharacterGrid";
 import { ExportCard } from "@/components/workspace/ExportCard";
+import { ALL_CHARS } from "@/types";
 
 export default function WorkspacePage({
   params,
@@ -99,6 +100,9 @@ export default function WorkspacePage({
     );
   }
 
+  const glyphsCount = Object.keys(glyphs).length;
+  const canPreview = glyphsCount >= ALL_CHARS.length * 0.5;
+
   return (
     <div className="h-dvh flex flex-col bg-lipi-cream overflow-hidden">
       {/* Top navigation bar */}
@@ -134,12 +138,22 @@ export default function WorkspacePage({
           </span>
         </div>
         <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
-          <Link
-            href={`/preview/${fontId}`}
-            className="btn-lipi btn-secondary text-xs py-1 px-2 sm:py-1.5 sm:px-3 shrink-0"
-          >
-            Preview ↗
-          </Link>
+          {canPreview ? (
+            <Link
+              href={`/preview/${fontId}`}
+              className="btn-lipi btn-secondary text-xs py-1 px-2 sm:py-1.5 sm:px-3 shrink-0"
+            >
+              Preview ↗
+            </Link>
+          ) : (
+            <button
+              disabled
+              title="Draw at least 50% of characters to preview"
+              className="btn-lipi btn-secondary text-xs py-1 px-2 sm:py-1.5 sm:px-3 shrink-0 opacity-50 cursor-not-allowed"
+            >
+              Preview ↗
+            </button>
+          )}
           <motion.button
             onClick={() => setShowExport(true)}
             whileHover={{ x: -1, y: -1, }}

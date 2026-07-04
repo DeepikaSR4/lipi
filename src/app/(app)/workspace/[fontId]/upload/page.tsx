@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { use } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
@@ -110,6 +110,13 @@ export default function UploadPage({
 
   const [loading, setLoading] = useState(true);
   const [flowState, setFlowState] = useState<"upload" | "processing" | "review" | "congrats">("upload");
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    if (searchParams.get("congrats") === "true") {
+      setFlowState("congrats");
+    }
+  }, [searchParams]);
   const [processingStep, setProcessingStep] = useState<"binarizing" | "detecting" | "mapping">("binarizing");
   const [uploadMode, setUploadMode] = useState<"template" | "sequence">("template");
   const [sequenceLayout, setSequenceLayout] = useState<"block" | "pairs">("block");
@@ -324,7 +331,7 @@ export default function UploadPage({
       loadGlyphs(formattedGlyphs);
 
       analytics.trackCharacterDetectionCompleted(Object.keys(formattedGlyphs).length);
-      setFlowState("congrats");
+      router.push(`/preview/${fontId}?fromUpload=true`);
     } catch (err) {
       console.error(err);
       setError("Failed to import font. Check network connection.");

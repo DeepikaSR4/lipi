@@ -22,7 +22,7 @@ export function ExportSection() {
         whileInView={{ opacity: 1, scale: 1 }}
         viewport={{ once: true }}
         transition={{ duration: 0.5 }}
-        className="max-w-lg mx-auto border-2 border-lipi-border bg-white relative rounded-[32px]"
+        className="max-w-lg mx-auto border-2 border-lipi-border bg-white relative rounded-[32px] overflow-hidden"
         
       >
         {/* Floating annotation */}

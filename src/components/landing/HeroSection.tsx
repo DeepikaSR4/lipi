@@ -79,12 +79,12 @@ export function HeroSection() {
         >
           {/* Annotation top */}
           <div className="flex items-center gap-3 mb-4">
-            <HandwrittenNote text="✨ now in beta" rotation={-2} color="green" />
+            <HandwrittenNote text="✨ newly launched" rotation={-2} color="green" />
             <span className="font-[family-name:var(--font-caveat)] text-sm text-lipi-text/60">
               →
             </span>
             <span className="font-[family-name:var(--font-caveat)] text-sm text-lipi-text/60">
-              free to start
+              try for free
             </span>
           </div>
 

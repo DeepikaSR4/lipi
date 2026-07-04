@@ -39,6 +39,12 @@ function FontCard({ project, onDelete }: { project: FontProject; onDelete: () =>
   const color = colors[project.fontName.charCodeAt(0) % colors.length];
   const glyphCount = Object.keys(project.glyphs).length;
 
+  const formatDate = (date: any) => {
+    if (!date) return "";
+    const d = new Date(date?.seconds ? date.seconds * 1000 : date);
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.96 }}
@@ -63,6 +69,9 @@ function FontCard({ project, onDelete }: { project: FontProject; onDelete: () =>
             </div>
             <div className="text-[10px] text-lipi-muted font-[family-name:var(--font-space-grotesk)] mt-0.5">
               {glyphCount} / 62 glyphs
+            </div>
+            <div className="text-[9px] text-lipi-muted font-[family-name:var(--font-space-grotesk)] mt-0.5">
+              Created {formatDate(project.createdAt)} · Edited {formatDate(project.updatedAt)}
             </div>
           </div>
         </Link>
@@ -103,6 +112,10 @@ function FontCard({ project, onDelete }: { project: FontProject; onDelete: () =>
             </div>
             <div className="text-xs text-lipi-muted font-[family-name:var(--font-space-grotesk)]">
               {glyphCount} / 62 glyphs
+            </div>
+            <div className="text-[10px] text-lipi-muted/60 font-[family-name:var(--font-space-grotesk)] mt-1">
+              Created: {formatDate(project.createdAt)} <br/>
+              Last edited: {formatDate(project.updatedAt)}
             </div>
 
             {/* Progress bar */}

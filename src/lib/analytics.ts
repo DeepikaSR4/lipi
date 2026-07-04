@@ -162,8 +162,8 @@ export const analytics = {
   },
 
   // ─── Misc ───────────────────────────────────────────────────────────────────
-  trackFeedbackSubmitted: (rating: number) => {
-    posthog.capture("feedback_submitted", { rating });
+  trackFeedbackSubmitted: (properties: { rating: number; nps: number | null; feedback: string; source: string }) => {
+    posthog.capture("feedback_submitted", properties);
   },
   trackBugReportSubmitted: (category: string) => {
     posthog.capture("bug_report_submitted", { category });

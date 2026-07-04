@@ -28,7 +28,7 @@ export function FeedbackModal({ isOpen, onClose, source = "download_prompt" }: F
 
   const handleSubmit = () => {
     // Fire PostHog event
-    analytics.trackEvent("feedback_submitted", {
+    analytics.trackFeedbackSubmitted({
       rating,
       nps,
       feedback,

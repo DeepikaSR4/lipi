@@ -5,7 +5,8 @@ import Link from "next/link";
 import { HandwrittenNote } from "@/components/ui/HandwrittenNote";
 import { PillButton } from "@/components/ui/PillButton";
 import { analytics } from "@/lib/analytics";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { getTotalFontsCount } from "@/lib/firestore";
 
 import { type Variants } from "framer-motion";
 
@@ -60,8 +61,11 @@ function WorkspacePreview() {
 }
 
 export function HeroSection() {
+  const [totalFonts, setTotalFonts] = useState<number | null>(null);
+
   useEffect(() => {
     analytics.trackLandingPageViewed();
+    getTotalFontsCount().then(setTotalFonts).catch(console.error);
   }, []);
 
   return (
@@ -130,7 +134,7 @@ export function HeroSection() {
           {/* Stats row */}
           <div className="flex gap-6 pt-4 border-t-2 border-lipi-border mt-auto">
             {[
-              { val: "12k+", label: "fonts created" },
+              { val: totalFonts ? `${totalFonts}+` : "...", label: "fonts created" },
               { val: "4.9★", label: "rating" },
               { val: "Free", label: "to start" },
             ].map(({ val, label }) => (

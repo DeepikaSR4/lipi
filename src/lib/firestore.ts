@@ -11,6 +11,7 @@ import {
   where,
   orderBy,
   serverTimestamp,
+  getCountFromServer,
 } from "firebase/firestore";
 import { db } from "./firebase";
 import type { UserProfile, FontProject } from "@/types";
@@ -41,6 +42,11 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
 }
 
 // ─── Font Projects ────────────────────────────────────────────────────────────
+export async function getTotalFontsCount(): Promise<number> {
+  const coll = collection(db, "fonts");
+  const snapshot = await getCountFromServer(coll);
+  return snapshot.data().count;
+}
 export async function getFontProjects(uid: string): Promise<FontProject[]> {
   const q = query(
     collection(db, "fonts"),

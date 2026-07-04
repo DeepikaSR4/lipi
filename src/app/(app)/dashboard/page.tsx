@@ -8,6 +8,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { getFontProjects, deleteFontProject } from "@/lib/firestore";
 import { analytics } from "@/lib/analytics";
 import type { FontProject } from "@/types";
+import { FeedbackModal } from "@/components/dashboard/FeedbackModal";
 
 function EmptyState() {
   return (
@@ -150,10 +151,11 @@ function FontCard({ project, index, onDelete }: { project: FontProject; index: n
 }
 
 export default function DashboardPage() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const [projects, setProjects] = useState<FontProject[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showFeedback, setShowFeedback] = useState(false);
 
   const loadProjects = async () => {
     if (!user) return;
@@ -272,6 +274,24 @@ export default function DashboardPage() {
           </motion.div>
         </motion.div>
       )}
+
+      {/* Soft nudge for feedback */}
+      {!loading && projects.length > 0 && (
+        <div className="text-center mt-12 mb-8">
+          <button 
+            onClick={() => setShowFeedback(true)}
+            className="text-xs font-[family-name:var(--font-space-grotesk)] text-lipi-muted hover:text-lipi-text underline decoration-lipi-border/40 hover:decoration-lipi-text underline-offset-4 transition-colors"
+          >
+            Got feedback on Lipi?
+          </button>
+        </div>
+      )}
+
+      <FeedbackModal 
+        isOpen={showFeedback} 
+        onClose={() => setShowFeedback(false)} 
+        source="dashboard_nudge"
+      />
     </div>
   );
 }

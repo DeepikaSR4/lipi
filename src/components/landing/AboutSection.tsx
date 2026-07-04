@@ -4,13 +4,16 @@ import { motion } from "framer-motion";
 
 export function AboutSection() {
   return (
-    <section id="about" className="px-4 md:px-8 py-16 md:py-24 max-w-7xl mx-auto border-t-2 border-lipi-border bg-lipi-cream">
-      <div className="text-center mb-10">
-        <span className="tag">about</span>
-        <h2 className="section-heading mt-3">Why Lipi?</h2>
+    <section id="about" className="px-4 md:px-8 py-16 md:py-24 max-w-7xl mx-auto bg-lipi-dark rounded-t-[48px] text-lipi-cream relative overflow-hidden">
+      {/* Decorative background element */}
+      <div className="absolute -top-32 -left-32 w-96 h-96 bg-lipi-green/10 rounded-full blur-3xl"></div>
+
+      <div className="text-center mb-10 relative z-10">
+        <span className="tag !bg-white/10 !text-white !border-white/20">about</span>
+        <h2 className="section-heading mt-3 !text-white">Why Lipi?</h2>
       </div>
 
-      <div className="max-w-3xl mx-auto space-y-6 font-[family-name:var(--font-space-grotesk)] text-lipi-text/80 text-lg leading-relaxed">
+      <div className="max-w-3xl mx-auto space-y-6 font-[family-name:var(--font-space-grotesk)] text-lipi-cream/80 text-lg leading-relaxed relative z-10">
         <motion.p
           initial={{ opacity: 0, y: 10 }}
           whileInView={{ opacity: 1, y: 0 }}

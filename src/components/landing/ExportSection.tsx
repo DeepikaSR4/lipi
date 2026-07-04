@@ -22,16 +22,17 @@ export function ExportSection() {
         whileInView={{ opacity: 1, scale: 1 }}
         viewport={{ once: true }}
         transition={{ duration: 0.5 }}
-        className="max-w-lg mx-auto border-2 border-lipi-border bg-white relative rounded-[32px] overflow-hidden"
-        
+        className="max-w-lg mx-auto relative"
       >
         {/* Floating annotation */}
-        <div className="absolute -top-4 -right-4">
+        <div className="absolute -top-4 -right-4 z-10">
           <HandwrittenNote text="your font!" rotation={5} color="lavender" />
         </div>
 
-        {/* Card header */}
-        <div className="border-b-2 border-lipi-border bg-lipi-green px-6 py-3 flex items-center gap-2">
+        {/* Card content container */}
+        <div className="border-2 border-lipi-border bg-white rounded-[32px] overflow-hidden relative">
+          {/* Card header */}
+          <div className="border-b-2 border-lipi-border bg-lipi-green px-6 py-3 flex items-center gap-2">
           <span className="text-xl">✓</span>
           <span className="font-[family-name:var(--font-space-grotesk)] font-bold text-sm">
             Your font is ready.
@@ -71,6 +72,7 @@ export function ExportSection() {
           <span>~48 KB</span>
           <span>·</span>
           <span>TTF + OTF</span>
+        </div>
         </div>
       </motion.div>
 

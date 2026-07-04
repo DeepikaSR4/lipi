@@ -6,11 +6,13 @@ import { useFontStore } from "@/store/fontStore";
 import { generateFont, downloadFont } from "@/lib/fontGenerator";
 import { useAuth } from "@/hooks/useAuth";
 import { analytics } from "@/lib/analytics";
+import { FeedbackModal } from "../dashboard/FeedbackModal";
 
 export function ExportCard({ onClose }: { onClose?: () => void }) {
   const { glyphs, fontName, setExportStatus, exportStatus } = useFontStore();
   const { user } = useAuth();
   const [error, setError] = useState("");
+  const [showFeedback, setShowFeedback] = useState(false);
 
   const handleExport = useCallback(async (format: "ttf" | "otf") => {
     if (Object.keys(glyphs).length === 0) {
@@ -25,6 +27,20 @@ export function ExportCard({ onClose }: { onClose?: () => void }) {
       downloadFont(buffer, fontName, format);
       setExportStatus("ready");
       analytics.trackFontExportCompleted(format === "ttf" ? "TTF" : "OTF", Math.round(buffer.byteLength / 1024));
+
+      // Trigger feedback check
+      setTimeout(() => {
+        const submitted = localStorage.getItem("lipi_feedback_submitted") === "true";
+        if (!submitted) {
+          const count = parseInt(localStorage.getItem("lipi_download_count") || "0", 10) + 1;
+          localStorage.setItem("lipi_download_count", count.toString());
+          
+          if (count % 5 === 1) { // 1st, 6th, 11th, etc.
+            setShowFeedback(true);
+          }
+        }
+      }, 1000);
+
     } catch (e) {
       console.error(e);
       setError("Export failed. Please try again.");
@@ -35,6 +51,7 @@ export function ExportCard({ onClose }: { onClose?: () => void }) {
   const glyphCount = Object.keys(glyphs).length;
 
   return (
+    <>
     <motion.div
       initial={{ opacity: 0, scale: 0.95, y: 20 }}
       animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -117,5 +134,7 @@ export function ExportCard({ onClose }: { onClose?: () => void }) {
         </button>
       </div>
     </motion.div>
+    <FeedbackModal isOpen={showFeedback} onClose={() => setShowFeedback(false)} />
+    </>
   );
 }

@@ -34,9 +34,9 @@ function EmptyState() {
   );
 }
 
-function FontCard({ project, onDelete }: { project: FontProject; onDelete: () => void }) {
-  const colors = ["#C9B6F5", "#C7F04F", "#F5F2EA", "#123524"];
-  const color = colors[project.fontName.charCodeAt(0) % colors.length];
+function FontCard({ project, index, onDelete }: { project: FontProject; index: number; onDelete: () => void }) {
+  const colors = ["#C7F04F", "#F5F2EA", "#123524", "#C9B6F5"];
+  const color = colors[index % colors.length];
   const glyphCount = Object.keys(project.glyphs).length;
 
   const formatDate = (date: any) => {
@@ -186,6 +186,15 @@ export default function DashboardPage() {
     visible: { transition: { staggerChildren: 0.08 } },
   };
 
+  const getMillis = (val: any) => {
+    if (!val) return 0;
+    if (val.seconds) return val.seconds * 1000;
+    return new Date(val).getTime() || 0;
+  };
+  const chronologicalIds = [...projects]
+    .sort((a, b) => getMillis(a.createdAt) - getMillis(b.createdAt))
+    .map(p => p.id);
+
   return (
     <div className="p-8 max-w-7xl mx-auto w-full">
       {/* Header */}
@@ -231,6 +240,7 @@ export default function DashboardPage() {
             <FontCard
               key={project.id}
               project={project}
+              index={chronologicalIds.indexOf(project.id)}
               onDelete={() => handleDelete(project.id)}
             />
           ))}

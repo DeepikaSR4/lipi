@@ -39,8 +39,7 @@ export function ExportCard({ onClose }: { onClose?: () => void }) {
       initial={{ opacity: 0, scale: 0.95, y: 20 }}
       animate={{ opacity: 1, scale: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95, y: 20 }}
-      className="border-2 border-lipi-border bg-white rounded-[32px]"
-      
+      className="border-2 border-lipi-border bg-white rounded-[32px] overflow-hidden"
     >
       {/* Header */}
       <div className={`border-b-2 border-lipi-border px-6 py-3 flex items-center justify-between ${exportStatus === "ready" ? "bg-lipi-green" : "bg-lipi-cream"}`}>

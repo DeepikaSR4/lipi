@@ -14,6 +14,7 @@ const TABS: { id: PreviewTab; label: string }[] = [
 export function PreviewPanel() {
   const [activeTab, setActiveTab] = useState<PreviewTab>("heading");
   const [customText, setCustomText] = useState("");
+  const [strokeWidth, setStrokeWidth] = useState(0);
   const { fontName, glyphs } = useFontStore();
 
   const displayText = customText || PREVIEW_SAMPLES[activeTab];
@@ -53,7 +54,10 @@ export function PreviewPanel() {
       {/* Preview area */}
       <div className="flex-1 p-4 overflow-auto">
         {hasGlyphs ? (
-          <div className={`font-[family-name:var(--font-caveat)] ${fontSize} leading-tight text-lipi-text break-words whitespace-pre-wrap`}>
+          <div 
+            className={`font-[family-name:var(--font-caveat)] ${fontSize} leading-tight text-lipi-text break-words whitespace-pre-wrap`}
+            style={{ WebkitTextStroke: `${strokeWidth}px currentColor` }}
+          >
             {displayText}
           </div>
         ) : (
@@ -77,6 +81,23 @@ export function PreviewPanel() {
           placeholder={PREVIEW_SAMPLES[activeTab]}
           rows={2}
           className="input-brutal text-sm resize-none"
+        />
+      </div>
+
+      {/* Thickness control */}
+      <div className="border-t-2 border-lipi-border p-3">
+        <label className="flex justify-between items-center text-xs font-[family-name:var(--font-space-grotesk)] text-lipi-muted mb-2">
+          <span>Boldness</span>
+          <span>{strokeWidth.toFixed(1)}px</span>
+        </label>
+        <input 
+          type="range" 
+          min="0" 
+          max="2" 
+          step="0.1" 
+          value={strokeWidth} 
+          onChange={e => setStrokeWidth(parseFloat(e.target.value))}
+          className="w-full h-1.5 bg-lipi-border/30 rounded-lg appearance-none cursor-pointer accent-lipi-dark"
         />
       </div>
 

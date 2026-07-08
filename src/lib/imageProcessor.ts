@@ -602,8 +602,16 @@ function binarize(ctx: CanvasRenderingContext2D, w: number, h: number) {
   let minGray = 255;
   let maxGray = 0;
   const grays = new Uint8Array(data.length / 4);
+  
   for (let i = 0; i < data.length; i += 4) {
-    const g = Math.round(0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]);
+    // Blend with white background using the alpha channel
+    // This prevents transparent backgrounds from turning black
+    const alpha = data[i + 3] / 255;
+    const r = data[i] * alpha + 255 * (1 - alpha);
+    const g_c = data[i + 1] * alpha + 255 * (1 - alpha);
+    const b = data[i + 2] * alpha + 255 * (1 - alpha);
+
+    const g = Math.round(0.299 * r + 0.587 * g_c + 0.114 * b);
     grays[i >> 2] = g;
     if (g < minGray) minGray = g;
     if (g > maxGray) maxGray = g;
@@ -614,7 +622,7 @@ function binarize(ctx: CanvasRenderingContext2D, w: number, h: number) {
   for (let i = 0; i < data.length; i += 4) {
     const stretched = Math.round(((grays[i >> 2] - minGray) / range) * 255);
     data[i] = data[i + 1] = data[i + 2] = stretched;
-    data[i + 3] = 255;
+    data[i + 3] = 255; // make fully opaque
   }
 
   // --- Step 2: Otsu auto-threshold ---

@@ -113,39 +113,6 @@ export function HeroSection() {
               >
                 Create your font — it's free
               </PillButton>
-              <PillButton
-                href="#demo"
-                variant="secondary"
-                size="md"
-                className="bg-white border-2 border-lipi-border/10 text-lipi-text !rounded-xl shadow-sm hover:bg-black/5 font-semibold"
-                onClick={() => analytics.trackDemoClicked("hero")}
-              >
-                ▶ Watch demo
-              </PillButton>
-            </motion.div>
-
-            <motion.div variants={itemVariants} className="flex items-center gap-8">
-              <div>
-                <div className="flex gap-1 text-[#C7F04F] text-xl drop-shadow-sm">
-                  ★★★★★
-                </div>
-                <div className="flex items-end gap-2 mt-1">
-                  <span className="font-bold text-xl text-lipi-text">4.9/5</span>
-                </div>
-                <div className="text-xs text-[#666] font-medium mt-0.5">from 1,200+ creators</div>
-              </div>
-
-              <div className="w-[1px] h-12 bg-lipi-border/20"></div>
-
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-full bg-[#E5F5A3] flex items-center justify-center flex-shrink-0">
-                  <span className="text-2xl transform -rotate-45">✎</span>
-                </div>
-                <div>
-                  <div className="font-bold text-xl text-lipi-text">{totalFonts ? `${(totalFonts/1000).toFixed(0)},000+` : "12,000+"}</div>
-                  <div className="text-xs text-[#666] font-medium mt-0.5">fonts created</div>
-                </div>
-              </div>
             </motion.div>
           </div>
 
@@ -218,33 +185,6 @@ export function HeroSection() {
               >
                 Create your font — it's free
               </PillButton>
-              <PillButton
-                href="#demo"
-                variant="secondary"
-                size="lg"
-                className="bg-white border-2 border-lipi-border/10 text-lipi-text !rounded-xl shadow-sm hover:bg-black/5 font-semibold w-full justify-center"
-                onClick={() => analytics.trackDemoClicked("hero")}
-              >
-                ▶ Watch demo
-              </PillButton>
-            </motion.div>
-
-            <motion.div variants={itemVariants} className="flex flex-row justify-between w-full px-2">
-              <div className="text-left">
-                <div className="flex gap-1 text-[#C7F04F] text-lg drop-shadow-sm">★★★★★</div>
-                <div className="font-bold text-xl text-lipi-text mt-1">4.9/5</div>
-                <div className="text-[10px] text-[#666] font-medium mt-0.5">from 1,200+ creators</div>
-              </div>
-              <div className="w-[1px] h-12 bg-lipi-border/20 self-center"></div>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-[#E5F5A3] flex items-center justify-center flex-shrink-0">
-                  <span className="text-xl transform -rotate-45">✎</span>
-                </div>
-                <div className="text-left">
-                  <div className="font-bold text-xl text-lipi-text">{totalFonts ? `${(totalFonts/1000).toFixed(0)},000+` : "12,000+"}</div>
-                  <div className="text-[10px] text-[#666] font-medium mt-0.5">fonts created</div>
-                </div>
-              </div>
             </motion.div>
           </div>
 

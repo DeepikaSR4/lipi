@@ -109,13 +109,6 @@ export function cellToStrokes(
           x: cellXFrac * CANVAS_SIZE,
           y: cellYFrac * CANVAS_SIZE,
         };
-      } else {
-        // Fallback for sequence mode (just fit to bounding box)
-        return {
-          x: ((p.x - minX) / cellW) * CANVAS_SIZE * 0.8 + CANVAS_SIZE * 0.1,
-          y: ((p.y - minY) / cellH) * CANVAS_SIZE * 0.8 + CANVAS_SIZE * 0.1,
-        };
-      }
     });
 
     if (normalized.length > 0) {

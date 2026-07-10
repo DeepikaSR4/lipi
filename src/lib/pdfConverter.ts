@@ -136,7 +136,9 @@ function extractCellStrokes(
       const i = (py * cw + px) * 4;
       if (data[i + 3] < 10) continue; // transparent
       const lum = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
-      if (lum < 180) {
+      // Use a stricter luminance threshold (120 instead of 180) to avoid picking up
+      // JPEG compression artifacts and noise from scanned PDFs.
+      if (lum < 120) {
         darkPts.push({ x: px, y: py });
         if (px < minX) minX = px;
         if (px > maxX) maxX = px;
@@ -155,8 +157,9 @@ function extractCellStrokes(
   };
 
   // Run the full Zhang-Suen thinning + skeleton tracing pipeline
-  // cellToStrokes already normalizes the strokes to CANVAS_SIZE with a 10% margin!
-  return cellToStrokes([syntheticBlob]);
+  // cellToStrokes will use the provided cell width/height to correctly normalize
+  // the strokes without distorting the baseline or scale.
+  return cellToStrokes([syntheticBlob], { type: "pdf", cw, ch });
 }
 
 

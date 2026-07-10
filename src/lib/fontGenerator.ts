@@ -139,7 +139,8 @@ function strokesToOpentypePath(
 export async function generateFont(
   glyphs: Record<string, string>,
   fontName: string,
-  _format: "ttf" | "otf"
+  _format: "ttf" | "otf",
+  strokeWidth: number = 40
 ): Promise<ArrayBuffer> {
   // Dynamic import to avoid SSR issues
   const opentype = await import("opentype.js");
@@ -196,7 +197,7 @@ export async function generateFont(
       lsb + widthInFontUnits + rsb
     );
 
-    const path = strokesToOpentypePath(strokes, opentype, CANVAS_SIZE, metrics, 8, minX, lsb);
+    const path = strokesToOpentypePath(strokes, opentype, CANVAS_SIZE, metrics, strokeWidth, minX, lsb);
 
     const glyph = new opentype.Glyph({
       name: `glyph_${unicode}`,

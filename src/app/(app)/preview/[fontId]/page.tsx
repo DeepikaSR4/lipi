@@ -39,6 +39,7 @@ export default function PreviewPage({
   const [showExport, setShowExport] = useState(false);
   const [loading, setLoading] = useState(true);
   const [fontUrl, setFontUrl] = useState<string | null>(null);
+  const [strokeWidth, setStrokeWidth] = useState<number>(40);
 
   useEffect(() => {
     if (!user || !fontId) return;
@@ -61,7 +62,7 @@ export default function PreviewPage({
 
     const generatePreview = async () => {
       try {
-        const buffer = await generateFont(project.glyphs, project.fontName, "ttf");
+        const buffer = await generateFont(project.glyphs, project.fontName, "ttf", strokeWidth);
         const blob = new Blob([buffer], { type: "font/ttf" });
         generatedUrl = URL.createObjectURL(blob);
         setFontUrl(generatedUrl);
@@ -75,7 +76,7 @@ export default function PreviewPage({
       // Revoke the locally-captured URL, not stale state
       if (generatedUrl) URL.revokeObjectURL(generatedUrl);
     };
-  }, [project]);
+  }, [project, strokeWidth]);
 
   if (loading) {
     return (
@@ -180,21 +181,38 @@ export default function PreviewPage({
         </div>
       </motion.div>
 
-      {/* Custom text */}
-      <div className="max-w-xl mb-8">
-        <label className="block text-xs font-[family-name:var(--font-space-grotesk)] font-semibold mb-2">
-          Type your own text
-        </label>
-        <textarea
-          value={customText}
-          onChange={e => setCustomText(e.target.value)}
-          onBlur={() => {
-            if (customText.trim()) analytics.trackPreviewTextEntered(customText.length);
-          }}
-          placeholder={PREVIEW_SAMPLES[activeTab]}
-          rows={3}
-          className="input-brutal resize-none"
-        />
+      {/* Custom text and Boldness */}
+      <div className="max-w-xl mb-8 flex flex-col sm:flex-row gap-6">
+        <div className="flex-1">
+          <label className="block text-xs font-[family-name:var(--font-space-grotesk)] font-semibold mb-2">
+            Type your own text
+          </label>
+          <textarea
+            value={customText}
+            onChange={e => setCustomText(e.target.value)}
+            onBlur={() => {
+              if (customText.trim()) analytics.trackPreviewTextEntered(customText.length);
+            }}
+            placeholder={PREVIEW_SAMPLES[activeTab]}
+            rows={3}
+            className="input-brutal resize-none h-24"
+          />
+        </div>
+        <div className="w-full sm:w-48">
+          <label className="block text-xs font-[family-name:var(--font-space-grotesk)] font-semibold mb-2">
+            Font Boldness: {strokeWidth}
+          </label>
+          <div className="h-24 bg-white border-2 border-lipi-border rounded-xl p-4 flex items-center justify-center shadow-brutal-sm">
+            <input
+              type="range"
+              min="10"
+              max="100"
+              value={strokeWidth}
+              onChange={(e) => setStrokeWidth(Number(e.target.value))}
+              className="w-full accent-lipi-text"
+            />
+          </div>
+        </div>
       </div>
 
       {/* Character showcase */}

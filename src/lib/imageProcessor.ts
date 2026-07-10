@@ -32,16 +32,25 @@ export function getBilinearCoords(
   return { px, py };
 }
 
+export type CellInfo = 
+  | {
+      type: "template";
+      r: number;
+      c: number;
+      tl: DotCentroid;
+      tr: DotCentroid;
+      bl: DotCentroid;
+      br: DotCentroid;
+    }
+  | {
+      type: "pdf";
+      cw: number;
+      ch: number;
+    };
+
 export function cellToStrokes(
   blobs: Blob[],
-  cellInfo?: {
-    r: number;
-    c: number;
-    tl: DotCentroid;
-    tr: DotCentroid;
-    bl: DotCentroid;
-    br: DotCentroid;
-  }
+  cellInfo?: CellInfo
 ): GlyphStrokes {
   if (blobs.length === 0) return [];
 
@@ -75,14 +84,26 @@ export function cellToStrokes(
   // 3. Normalize the traced strokes
   rawStrokes.forEach((stroke) => {
     const normalized: Point[] = stroke.map((p) => {
-      if (cellInfo) {
-        const { px, py } = getBilinearCoords(p.x, p.y, cellInfo.tl, cellInfo.tr, cellInfo.bl, cellInfo.br);
+        let cellXFrac, cellYFrac;
         
-        const colFrac = (px - 0.0263) / 0.9474;
-        const rowFrac = (py - 0.0366) / 0.9323;
-        
-        const cellXFrac = (colFrac * 10) - cellInfo.c;
-        const cellYFrac = (rowFrac * 9) - cellInfo.r;
+        if (cellInfo && cellInfo.type === "template") {
+          const { px, py } = getBilinearCoords(p.x, p.y, cellInfo.tl, cellInfo.tr, cellInfo.bl, cellInfo.br);
+          const colFrac = (px - 0.0263) / 0.9474;
+          const rowFrac = (py - 0.0366) / 0.9323;
+          
+          cellXFrac = (colFrac * 10) - cellInfo.c;
+          cellYFrac = (rowFrac * 9) - cellInfo.r;
+        } else if (cellInfo && cellInfo.type === "pdf") {
+          // PDF mode: p.x and p.y are already relative to the top-left of the cell
+          cellXFrac = p.x / cellInfo.cw;
+          cellYFrac = p.y / cellInfo.ch;
+        } else {
+          // Fallback sequence mode
+          return {
+            x: ((p.x - minX) / cellW) * CANVAS_SIZE * 0.8 + CANVAS_SIZE * 0.1,
+            y: ((p.y - minY) / cellH) * CANVAS_SIZE * 0.8 + CANVAS_SIZE * 0.1,
+          };
+        }
         
         return {
           x: cellXFrac * CANVAS_SIZE,
@@ -447,7 +468,7 @@ export async function processHandwritingImage(
 
       const cellBlobsList = cellBlobs[r][c];
       if (cellBlobsList.length > 0) {
-        const strokes = cellToStrokes(cellBlobsList, { r, c, tl: tlDot, tr: trDot, bl: blDot, br: brDot });
+        const strokes = cellToStrokes(cellBlobsList, { type: "template", r, c, tl: tlDot, tr: trDot, bl: blDot, br: brDot });
         if (strokes.length > 0) {
           glyphMap[char] = strokes;
         }

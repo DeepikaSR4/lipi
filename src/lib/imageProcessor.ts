@@ -5,14 +5,14 @@ import type { GlyphStrokes, Point } from "@/types";
 import { ALL_CHARS } from "@/types";
 import { CANVAS_SIZE } from "./fontGenerator";
 
-interface DotCentroid {
+export interface DotCentroid {
   blob: Blob;
   index: number;
   cx: number;
   cy: number;
 }
 
-function getBilinearCoords(
+export function getBilinearCoords(
   x: number,
   y: number,
   tl: DotCentroid,
@@ -32,7 +32,17 @@ function getBilinearCoords(
   return { px, py };
 }
 
-export function cellToStrokes(blobs: Blob[]): GlyphStrokes {
+export function cellToStrokes(
+  blobs: Blob[],
+  cellInfo?: {
+    r: number;
+    c: number;
+    tl: DotCentroid;
+    tr: DotCentroid;
+    bl: DotCentroid;
+    br: DotCentroid;
+  }
+): GlyphStrokes {
   if (blobs.length === 0) return [];
 
   // Find combined bounding box of all blobs in the cell
@@ -62,15 +72,44 @@ export function cellToStrokes(blobs: Blob[]): GlyphStrokes {
 
   const strokes: GlyphStrokes = [];
 
-  // 3. Normalize the traced strokes relative to the combined cell bounds
+  // 3. Normalize the traced strokes
   rawStrokes.forEach((stroke) => {
-    const normalized: Point[] = stroke.map((p) => ({
-      x: ((p.x - minX) / cellW) * CANVAS_SIZE * 0.8 + CANVAS_SIZE * 0.1,
-      y: ((p.y - minY) / cellH) * CANVAS_SIZE * 0.8 + CANVAS_SIZE * 0.1,
-    }));
+    const normalized: Point[] = stroke.map((p) => {
+      if (cellInfo) {
+        const { px, py } = getBilinearCoords(p.x, p.y, cellInfo.tl, cellInfo.tr, cellInfo.bl, cellInfo.br);
+        
+        const colFrac = (px - 0.0263) / 0.9474;
+        const rowFrac = (py - 0.0366) / 0.9323;
+        
+        const cellXFrac = (colFrac * 10) - cellInfo.c;
+        const cellYFrac = (rowFrac * 9) - cellInfo.r;
+        
+        return {
+          x: cellXFrac * CANVAS_SIZE,
+          y: cellYFrac * CANVAS_SIZE,
+        };
+      } else {
+        // Fallback for sequence mode (just fit to bounding box)
+        return {
+          x: ((p.x - minX) / cellW) * CANVAS_SIZE * 0.8 + CANVAS_SIZE * 0.1,
+          y: ((p.y - minY) / cellH) * CANVAS_SIZE * 0.8 + CANVAS_SIZE * 0.1,
+        };
+      }
+    });
 
     if (normalized.length > 0) {
-      strokes.push(normalized);
+      if (cellInfo) {
+        // Filter out strokes that are entirely inside the top-left 15% of the cell
+        // These are almost certainly the pre-printed reference labels (A, B, C...)
+        const isPrePrintedLabel = normalized.every(
+          p => p.x < CANVAS_SIZE * 0.15 && p.y < CANVAS_SIZE * 0.15
+        );
+        if (!isPrePrintedLabel) {
+          strokes.push(normalized);
+        }
+      } else {
+        strokes.push(normalized);
+      }
     }
   });
 
@@ -408,7 +447,7 @@ export async function processHandwritingImage(
 
       const cellBlobsList = cellBlobs[r][c];
       if (cellBlobsList.length > 0) {
-        const strokes = cellToStrokes(cellBlobsList);
+        const strokes = cellToStrokes(cellBlobsList, { r, c, tl: tlDot, tr: trDot, bl: blDot, br: brDot });
         if (strokes.length > 0) {
           glyphMap[char] = strokes;
         }

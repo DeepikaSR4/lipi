@@ -161,11 +161,11 @@ export default function UploadPage({
     setDragActive(false);
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       const droppedFile = e.dataTransfer.files[0];
-      if (droppedFile.type.startsWith("image/") || isPdf(droppedFile)) {
+      if (isPdf(droppedFile)) {
         setFile(droppedFile);
         setError("");
       } else {
-        setError("Please upload an image (PNG/JPG) or PDF file.");
+        setError("Please upload a PDF file.");
       }
     }
   };
@@ -377,67 +377,24 @@ export default function UploadPage({
               exit={{ opacity: 0, y: -15 }}
               className="space-y-6"
             >
-              {/* Mode selector */}
+              {/* Instructions */}
               <div className="border-2 border-lipi-border bg-white p-5 rounded-[32px] shadow-brutal-sm">
-                <h3 className="font-bold text-lg mb-4">Choose upload method</h3>
-                <div className="grid grid-cols-2 gap-3 mb-5">
+                <h3 className="font-bold text-lg mb-4">Instructions</h3>
+                <div className="space-y-4">
+                  <ol className="list-decimal pl-5 space-y-1.5 text-sm text-lipi-text/80">
+                    <li><strong>Download</strong> the template PDF below.</li>
+                    <li><strong>Print</strong> it on plain white paper.</li>
+                    <li><strong>Fill in</strong> each box with the character shown in its corner — write clearly, stay inside the box.</li>
+                    <li><strong>Scan</strong> or capture the filled sheet as a PDF.</li>
+                    <li><strong>Upload</strong> the PDF below.</li>
+                  </ol>
                   <button
-                    onClick={() => setUploadMode("template")}
-                    className={cn(
-                      "p-4 rounded-2xl border-2 text-left transition-all cursor-pointer",
-                      uploadMode === "template"
-                        ? "border-lipi-border bg-lipi-green shadow-[2px_2px_0_#111]"
-                        : "border-lipi-border/30 bg-lipi-cream/20 hover:bg-lipi-cream/50"
-                    )}
+                    onClick={downloadTemplate}
+                    className="btn-lipi btn-dark text-sm px-5 py-2.5 w-full justify-center"
                   >
-                    <div className="text-xl mb-1">📄</div>
-                    <div className="font-bold text-sm">Template <span className="text-[10px] font-normal bg-lipi-border text-white px-1.5 py-0.5 rounded-full ml-1">Recommended</span></div>
-                    <div className="text-xs text-lipi-muted mt-1">Download a grid template, fill it in, photograph and upload. Most accurate.</div>
-                  </button>
-                  <button
-                    onClick={() => setUploadMode("sequence")}
-                    className={cn(
-                      "p-4 rounded-2xl border-2 text-left transition-all cursor-pointer",
-                      uploadMode === "sequence"
-                        ? "border-lipi-border bg-lipi-green shadow-[2px_2px_0_#111]"
-                        : "border-lipi-border/30 bg-lipi-cream/20 hover:bg-lipi-cream/50"
-                    )}
-                  >
-                    <div className="text-xl mb-1">✍️</div>
-                    <div className="font-bold text-sm">Freehand Sequence</div>
-                    <div className="text-xs text-lipi-muted mt-1">Write all characters in rows on plain paper. Works best on a white background.</div>
+                    ⬇ Download Handwriting Template PDF
                   </button>
                 </div>
-
-                {uploadMode === "template" ? (
-                  <div className="space-y-4">
-                    <ol className="list-decimal pl-5 space-y-1.5 text-sm text-lipi-text/80">
-                      <li><strong>Download</strong> the template PDF below.</li>
-                      <li><strong>Print</strong> it on plain white paper.</li>
-                      <li><strong>Fill in</strong> each box with the character shown in its corner — write clearly, stay inside the box.</li>
-                      <li><strong>Photograph</strong> the filled sheet flat and well-lit — all 4 corner dots must be visible.</li>
-                      <li><strong>Upload</strong> the photo below.</li>
-                    </ol>
-                    <button
-                      onClick={downloadTemplate}
-                      className="btn-lipi btn-dark text-sm px-5 py-2.5 w-full justify-center"
-                    >
-                      ⬇ Download Handwriting Template PDF
-                    </button>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    <ol className="list-decimal pl-5 space-y-1.5 text-sm text-lipi-text/80">
-                      <li><strong>Write in Order:</strong> All 81 characters in exact sequence (A–Z, a–z, 0–9, symbols) in horizontal rows on a white background.</li>
-                      <li><strong>Keep separated:</strong> Strokes must not touch adjacent characters.</li>
-                      <li><strong>Multi-stroke letters</strong> (i, j, ?, !, =) — keep dots/accents close to their base.</li>
-                      <li><strong>Photograph clearly:</strong> Flat, white background, good lighting, all rows visible.</li>
-                    </ol>
-                    <div className="text-xs font-mono break-all bg-lipi-cream p-3 rounded-lg border border-gray-100 max-h-[60px] overflow-y-auto leading-relaxed">
-                      {ALL_CHARS.join(" ")}
-                    </div>
-                  </div>
-                )}
               </div>
 
               {/* Upload Dropzone */}
@@ -455,7 +412,7 @@ export default function UploadPage({
                   <input
                     type="file"
                     id="handwriting-image-upload"
-                    accept="image/*,application/pdf"
+                    accept="application/pdf"
                     onChange={handleFileChange}
                     className="hidden"
                   />
@@ -479,12 +436,12 @@ export default function UploadPage({
                       htmlFor="handwriting-image-upload"
                       className="cursor-pointer space-y-3 flex flex-col items-center"
                     >
-                      <div className="text-4xl text-lipi-border/40">📸</div>
+                      <div className="text-4xl text-lipi-border/40">📄</div>
                       <div>
-                        <span className="font-bold text-sm text-lipi-text underline">Click to upload image</span>
+                        <span className="font-bold text-sm text-lipi-text underline">Click to upload PDF</span>
                         <span className="text-sm text-lipi-text/60"> or drag and drop</span>
                       </div>
-                      <p className="text-xs text-lipi-muted">Accepts PNG, JPG, WEBP, or PDF. Max 10MB.</p>
+                      <p className="text-xs text-lipi-muted">Accepts PDF only. Max 10MB.</p>
                     </label>
                   )}
                 </div>

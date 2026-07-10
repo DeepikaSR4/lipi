@@ -101,7 +101,7 @@ export default function CreatePage() {
             <div className="text-4xl mb-3">📄</div>
             <h3 className="font-[family-name:var(--font-space-grotesk)] font-bold text-lg mb-1">Upload it</h3>
             <p className="font-[family-name:var(--font-space-grotesk)] text-sm text-lipi-text/60">
-              Photograph your handwritten alphabet and upload a PNG/JPG.
+              Download the template, write over it, and re-upload the PDF.
             </p>
             {method === "upload" && (
               <div className="mt-3 font-[family-name:var(--font-caveat)] text-sm font-bold">✓ Selected</div>

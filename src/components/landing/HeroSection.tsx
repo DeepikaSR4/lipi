@@ -98,7 +98,7 @@ export function HeroSection() {
             variants={itemVariants}
             className="font-[family-name:var(--font-primary)] text-[#555] text-base md:text-lg max-w-lg mb-6 leading-relaxed"
           >
-            Draw your letters, upload your handwriting, and download a <strong className="font-bold text-lipi-text">real .otf font</strong> that's entirely yours.
+            Draw your letters, upload your handwriting, and download a <strong className="font-bold text-lipi-text">real fonts</strong> that's entirely yours.
           </motion.p>
 
           {/* Desktop CTAs & Stats (Order 2 on Desktop, Hidden on Mobile, moved to below visuals) */}

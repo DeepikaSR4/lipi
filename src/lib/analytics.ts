@@ -42,13 +42,13 @@ export const analytics = {
   trackCreateFontClicked: (source_location: string) => {
     posthog.capture("create_font_clicked", { source_location });
   },
-  trackFontCreationStarted: (creation_method: "draw" | "upload") => {
+  trackFontCreationStarted: (creation_method: "draw" | "upload" | "screenshot") => {
     posthog.capture("font_creation_started", { creation_method });
   },
   trackFontNameAdded: (font_name: string) => {
     posthog.capture("font_name_added", { font_name });
   },
-  trackFontCreationMethodSelected: (method: "draw" | "upload") => {
+  trackFontCreationMethodSelected: (method: "draw" | "upload" | "screenshot") => {
     posthog.capture("font_creation_method_selected", { method });
   },
 

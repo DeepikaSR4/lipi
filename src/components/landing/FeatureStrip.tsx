@@ -4,7 +4,6 @@ import { motion } from "framer-motion";
 
 const features = [
   { icon: "✑", label: "Fonts that feel like you" },
-  { icon: "✦", label: "AI cleanup" },
   { icon: "↗", label: "Easy export" },
   { icon: "∞", label: "Yours forever" },
   { icon: "◈", label: "Personal & unique" },

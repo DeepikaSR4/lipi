@@ -20,7 +20,7 @@ export function CompatibilityStrip() {
     <div id="features" className="bg-lipi-green border-y-2 border-lipi-border py-4 overflow-hidden">
       <div className="flex items-center gap-2 mb-2 px-6">
         <span className="font-[family-name:var(--font-caveat)] text-lipi-text text-sm font-bold">
-          works everywhere you design →
+          works everywhere you want →
         </span>
       </div>
 

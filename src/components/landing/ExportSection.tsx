@@ -10,7 +10,7 @@ export function ExportSection() {
       <div className="text-center mb-10">
         <span className="tag">export</span>
         <h2 className="section-heading mt-3">
-          Ready to ship.
+          Ready to use.
           <br />
           <em className="font-[family-name:var(--font-cormorant)] italic">Instantly.</em>
         </h2>
@@ -79,7 +79,7 @@ export function ExportSection() {
       {/* Bottom CTA */}
       <div className="text-center mt-16">
         <p className="font-[family-name:var(--font-cormorant)] text-2xl italic text-lipi-muted mb-6">
-          "The most personal font ever made — by you."
+          "The most personal thing ever made — by you."
         </p>
         <Link href="/signup" className="btn-lipi btn-primary text-lg px-10 py-4">
           Start for free →

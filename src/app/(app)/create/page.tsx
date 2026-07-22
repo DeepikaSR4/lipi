@@ -88,7 +88,7 @@ export default function CreatePage() {
             )}
           </motion.div>
 
-          {/* Upload */}
+          {/* Upload (Template / Handwriting) */}
           <motion.div
             whileHover={{ x: -3, y: -3, }}
             onClick={() => {
@@ -99,7 +99,7 @@ export default function CreatePage() {
             
           >
             <div className="text-4xl mb-3">📄</div>
-            <h3 className="font-[family-name:var(--font-space-grotesk)] font-bold text-lg mb-1">Upload it</h3>
+            <h3 className="font-[family-name:var(--font-space-grotesk)] font-bold text-lg mb-1">Upload handwriting</h3>
             <p className="font-[family-name:var(--font-space-grotesk)] text-sm text-lipi-text/60">
               Download the template, write over it, and re-upload the PDF.
             </p>

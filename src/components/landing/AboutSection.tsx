@@ -28,7 +28,7 @@ export function AboutSection() {
           viewport={{ once: true }}
           transition={{ duration: 0.5, delay: 0.1 }}
         >
-          We built this platform to bridge the gap between analog charm and digital convenience. By combining modern web technologies like Next.js and advanced vectorization techniques, Lipi allows anyone to digitize their handwriting effortlessly. 
+          I built this platform to bridge the gap between analog charm and digital convenience
         </motion.p>
         <motion.p
           initial={{ opacity: 0, y: 10 }}

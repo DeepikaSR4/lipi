@@ -31,11 +31,13 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <span className="font-[family-name:var(--font-cormorant)] text-2xl font-bold">lipi</span>
           <p className="font-[family-name:var(--font-space-grotesk)] text-sm text-lipi-cream/50 text-center">
-            Your handwriting, now a font. © 2025 Lipi
+            Your handwriting, now a font. © 2026 
           </p>
           <div className="flex gap-4 text-sm text-lipi-cream/50 font-[family-name:var(--font-space-grotesk)]">
-            <a href="/login" className="hover:text-lipi-cream transition-colors">Sign in</a>
-            <a href="/signup" className="hover:text-lipi-cream transition-colors">Sign up</a>
+             <a href="https://deepikasr4.web.app" className="hover:text-lipi-cream transition-colors flex flex-col items-end leading-tight">
+               <span>made with love ❤️</span>
+               <span>Deepika</span>
+             </a>
           </div>
         </div>
       </footer>
